@@ -1,0 +1,5 @@
+{
+  "name": "Pets24x7",
+  "description": "The ultimate directory for pet services near you. Find vets, groomers, trainers, and more.",
+  "requestFramePermissions": ["geolocation"]
+}

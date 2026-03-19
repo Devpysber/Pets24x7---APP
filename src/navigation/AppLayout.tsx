@@ -1,0 +1,63 @@
+import React, { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { BottomTabs } from './BottomTabs';
+import { MapPin, Bell, LogIn } from 'lucide-react';
+import { useAppStore } from '../store/useAppStore';
+import { LoginModal } from '../components/LoginModal';
+
+export const AppLayout: React.FC = () => {
+  const { location: userLocation, user } = useAppStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const isDetailView = location.pathname.startsWith('/service/');
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="mx-auto max-w-md bg-white min-h-screen shadow-xl relative">
+        {!isDetailView && (
+          <header className="sticky top-0 z-40 border-b border-black/5 bg-white/80 backdrop-blur-xl px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Your Location</span>
+                <div className="flex items-center gap-1 text-indigo-600">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm font-bold">{userLocation}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button className="relative p-2 rounded-full bg-gray-50 border border-black/5">
+                  <Bell className="h-5 w-5 text-gray-600" />
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white" />
+                </button>
+                {user ? (
+                  <button 
+                    onClick={() => navigate('/profile')}
+                    className="h-9 w-9 rounded-full bg-gray-100 border border-black/5 overflow-hidden"
+                  >
+                    <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsLoginOpen(true)}
+                    className="h-9 px-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center gap-2 shadow-lg shadow-indigo-100"
+                  >
+                    <LogIn className="h-3 w-3" />
+                    LOGIN
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+        )}
+        <main className="p-0">
+          <Outlet />
+        </main>
+        {!isDetailView && <BottomTabs />}
+        
+        <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      </div>
+    </div>
+  );
+};
