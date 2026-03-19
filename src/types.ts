@@ -10,29 +10,43 @@ export interface User {
   role: UserRole;
 }
 
+export type InquiryType = 'call' | 'whatsapp' | 'inquiry';
+
+export type InquiryStatus = 'new' | 'contacted' | 'closed';
+
 export interface Inquiry {
   id: string;
   serviceId: string;
+  serviceName: string;
+  serviceImage: string;
   userId: string;
   userName: string;
   userPhone: string;
   message: string;
+  type: InquiryType;
+  serviceType?: string;
+  preferredTime?: string;
+  status: InquiryStatus;
   createdAt: string;
 }
 
 export interface PetService {
   id: string;
+  vendorId: string;
   name: string;
-  category: 'Pet Shops' | 'Vet Clinics' | 'Grooming' | 'Trainers' | 'Pet Hotels' | 'Events';
+  category: 'Pet Shops' | 'Vet Clinics' | 'Grooming' | 'Trainers' | 'Pet Hotels' | 'Events' | 'Daycare';
   rating: number;
   reviewCount: number;
   location: string;
   image: string;
+  price?: string;
   isPremium: boolean;
   isVerified?: boolean;
   phone: string;
   whatsapp: string;
   description: string;
+  isTopRated?: boolean;
+  isMostBooked?: boolean;
 }
 
 export interface Category {

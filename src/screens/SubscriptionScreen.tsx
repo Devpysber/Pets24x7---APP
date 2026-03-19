@@ -83,77 +83,121 @@ export default function SubscriptionScreen() {
         </div>
       </div>
 
-      <div className="px-6 -mt-12 relative z-20">
-        {/* Pricing Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl p-8 shadow-xl shadow-indigo-100 border border-indigo-50 text-center"
-        >
-          <div className="inline-block px-4 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-            Best Value
-          </div>
-          <div className="flex items-center justify-center mb-2">
-            <span className="text-2xl font-bold text-slate-400 mr-1">₹</span>
-            <span className="text-5xl font-black text-slate-900">999</span>
-            <span className="text-slate-400 font-medium ml-1">/month</span>
-          </div>
-          <p className="text-slate-500 text-sm mb-8">Cancel anytime. No hidden fees.</p>
-          
-          <Button 
-            onClick={handleUpgrade}
-            className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg shadow-lg shadow-indigo-200 rounded-2xl flex items-center justify-center gap-2"
+      <div className="px-4 -mt-12 relative z-20 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {/* Free Plan - Limited */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 border border-slate-200 opacity-80 grayscale-[0.5] flex flex-col"
           >
-            <Sparkles className="w-5 h-5" />
-            Upgrade Now
-          </Button>
-          
-          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
-            <ShieldCheck className="w-4 h-4" />
-            Secure payment via Razorpay
-          </div>
-        </motion.div>
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-slate-900">Free Plan</h3>
+              <p className="text-xs text-slate-500">Basic listing for your business</p>
+            </div>
+            
+            <div className="mb-8">
+              <span className="text-3xl font-bold text-slate-900">₹0</span>
+              <span className="text-slate-500 ml-1 text-sm">/month</span>
+            </div>
 
-        {/* Benefits List */}
-        <div className="mt-12 space-y-6">
-          <h2 className="text-xl font-bold text-slate-900 px-2">Why Premium?</h2>
-          <div className="grid gap-4">
-            {benefits.map((benefit, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex gap-4"
-              >
-                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", benefit.bg)}>
-                  <benefit.icon className={cn("w-6 h-6", benefit.color)} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 mb-1">{benefit.title}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{benefit.description}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+            <ul className="space-y-4 mb-8 flex-grow">
+              <li className="flex items-start gap-3 text-xs text-slate-600">
+                <div className="mt-0.5 text-red-400 font-bold">✕</div>
+                <span>Standard search placement (Bottom)</span>
+              </li>
+              <li className="flex items-start gap-3 text-xs text-slate-600">
+                <div className="mt-0.5 text-red-400 font-bold">✕</div>
+                <span>No premium badge or glow</span>
+              </li>
+              <li className="flex items-start gap-3 text-xs text-slate-600">
+                <div className="mt-0.5 text-red-400 font-bold">✕</div>
+                <span>Limited lead visibility</span>
+              </li>
+              <li className="flex items-start gap-3 text-xs text-slate-600">
+                <div className="mt-0.5 text-emerald-500 font-bold">✓</div>
+                <span>1 Business listing</span>
+              </li>
+            </ul>
+
+            <Button variant="outline" className="w-full cursor-not-allowed border-slate-200 text-slate-400" disabled>
+              Current Plan
+            </Button>
+          </motion.div>
+
+          {/* Premium Plan - Powerful */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white rounded-3xl p-8 border-2 border-amber-400 shadow-2xl shadow-amber-200/50 relative overflow-hidden ring-4 ring-amber-400/10 flex flex-col"
+          >
+            <div className="absolute top-0 right-0 bg-amber-400 text-amber-950 text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest">
+              Most Popular
+            </div>
+            
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                Premium Plan
+                <Zap className="h-5 w-5 text-amber-500 fill-amber-500" />
+              </h3>
+              <p className="text-xs text-slate-500">Get 10x more leads and visibility</p>
+            </div>
+            
+            <div className="mb-8">
+              <span className="text-4xl font-black text-slate-900">₹999</span>
+              <span className="text-slate-500 ml-1 font-medium">/month</span>
+            </div>
+
+            <ul className="space-y-5 mb-8 flex-grow">
+              {benefits.map((benefit, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <div className={cn("mt-0.5 p-1.5 rounded-lg shrink-0", benefit.bg)}>
+                    <benefit.icon className={cn("h-4 w-4", benefit.color)} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{benefit.title}</p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">{benefit.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <Button 
+              onClick={handleUpgrade}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-xl shadow-amber-500/30 h-14 text-lg font-black group rounded-2xl"
+            >
+              Get More Leads Now
+              <ChevronRight className="ml-1 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+            
+            <p className="text-center text-[10px] text-slate-400 mt-4 flex items-center justify-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              Secure payment. Cancel anytime.
+            </p>
+          </motion.div>
         </div>
 
         {/* Testimonial */}
-        <div className="mt-12 bg-indigo-50 p-6 rounded-3xl border border-indigo-100">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-12 bg-indigo-50 p-6 rounded-3xl border border-indigo-100 max-w-2xl mx-auto"
+        >
           <div className="flex items-center gap-1 mb-3">
             {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-3 h-3 text-amber-400 fill-amber-400" />)}
           </div>
-          <p className="text-slate-700 text-sm italic mb-4">
+          <p className="text-slate-700 text-sm italic mb-4 leading-relaxed">
             "Since upgrading to Premium, my grooming business has seen a 300% increase in monthly inquiries. The featured placement really works!"
           </p>
           <div className="flex items-center gap-3">
-            <img src="https://picsum.photos/seed/vendor1/100/100" alt="Vendor" className="w-10 h-10 rounded-full object-cover" />
+            <img src="https://picsum.photos/seed/vendor1/100/100" alt="Vendor" className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" />
             <div>
               <div className="text-xs font-bold text-slate-900">Rajesh Kumar</div>
               <div className="text-[10px] text-slate-500">Paws & Claws Grooming</div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

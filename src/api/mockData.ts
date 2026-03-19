@@ -3,6 +3,7 @@ import { PetService, LostFoundPost, User } from '../types';
 export const mockServices: PetService[] = [
   {
     id: 's1',
+    vendorId: 'v1',
     name: 'Paws & Claws Grooming',
     category: 'Grooming',
     rating: 4.8,
@@ -16,6 +17,7 @@ export const mockServices: PetService[] = [
   },
   {
     id: 's2',
+    vendorId: 'v2',
     name: 'Happy Tails Pet Hotel',
     category: 'Pet Hotels',
     rating: 4.9,
@@ -30,6 +32,7 @@ export const mockServices: PetService[] = [
   },
   {
     id: 's3',
+    vendorId: 'v3',
     name: 'City Vet Clinic',
     category: 'Vet Clinics',
     rating: 4.5,
@@ -43,6 +46,7 @@ export const mockServices: PetService[] = [
   },
   {
     id: 's4',
+    vendorId: 'v4',
     name: 'Elite Dog Trainers',
     category: 'Trainers',
     rating: 4.7,

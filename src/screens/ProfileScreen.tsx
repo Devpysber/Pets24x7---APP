@@ -104,6 +104,17 @@ export const ProfileScreen: React.FC = () => {
         </Card>
 
         {/* Admin/Vendor Dashboard Link */}
+        <Link 
+          to="/leads"
+          className="mt-4 flex items-center justify-between p-4 rounded-2xl bg-emerald-50 text-emerald-700 font-bold text-sm border border-emerald-100 shadow-sm shadow-emerald-100/50"
+        >
+          <div className="flex items-center gap-3">
+            <MessageSquare className="h-5 w-5" />
+            <span>My Inquiries & Leads</span>
+          </div>
+          <ChevronRight className="h-5 w-5 opacity-50" />
+        </Link>
+
         {(userRole === 'admin' || userRole === 'vendor') && (
           <Link 
             to={userRole === 'admin' ? '/admin/dashboard' : '/vendor/dashboard'}

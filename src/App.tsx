@@ -6,6 +6,7 @@ import { LostFoundScreen } from './screens/LostFoundScreen';
 import { CommunityScreen } from './screens/CommunityScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { ServiceDetailsScreen } from './screens/ServiceDetailsScreen';
+import { LeadHistoryScreen } from './screens/LeadHistoryScreen';
 import VendorDashboardScreen from './screens/VendorDashboardScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
 
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/lost-found" element={<LostFoundScreen />} />
           <Route path="/community" element={<CommunityScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
+          <Route path="/leads" element={<LeadHistoryScreen />} />
           <Route path="/vendor/dashboard" element={<VendorDashboardScreen />} />
           <Route path="/admin/dashboard" element={<AdminDashboardScreen />} />
         </Route>

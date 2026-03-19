@@ -1,16 +1,5 @@
 import { create } from 'zustand';
-import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment } from '../types';
-
-export interface Inquiry {
-  id: string;
-  serviceId: string;
-  serviceName: string;
-  serviceImage: string;
-  userName: string;
-  userPhone: string;
-  message: string;
-  createdAt: string;
-}
+import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment, Inquiry } from '../types';
 
 interface AppState {
   user: User | null;
@@ -33,6 +22,7 @@ interface AppState {
   setUserRole: (role: 'user' | 'vendor' | 'admin') => void;
   buyLeads: (amount: number) => void;
   updateSubscription: (plan: 'free' | 'premium') => void;
+  cancelSubscription: () => void;
   setServices: (services: PetService[]) => void;
   addService: (service: Omit<PetService, 'id'>) => void;
   updateService: (id: string, service: Partial<PetService>) => void;
@@ -43,7 +33,8 @@ interface AppState {
   setLocation: (location: string) => void;
   addLostFoundPost: (post: Omit<LostFoundPost, 'id' | 'createdAt' | 'userName' | 'userImage'>) => void;
   toggleFavorite: (serviceId: string) => void;
-  addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt'>) => void;
+  addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'userId' | 'status'>) => void;
+  updateInquiryStatus: (id: string, status: Inquiry['status']) => void;
   addCommunityPost: (post: Omit<CommunityPost, 'id' | 'createdAt' | 'userName' | 'userImage' | 'userId' | 'likes' | 'comments'>) => void;
   toggleLikeCommunityPost: (postId: string) => void;
   addCommunityComment: (postId: string, text: string) => void;
@@ -81,7 +72,42 @@ export const useAppStore = create<AppState>((set) => ({
       link: '/vets'
     }
   ],
-  services: [],
+  services: [
+    {
+      id: 's1',
+      vendorId: 'u1',
+      name: 'Happy Paws Grooming',
+      category: 'Grooming',
+      rating: 4.8,
+      reviewCount: 124,
+      image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=400',
+      location: 'Andheri West, Mumbai',
+      price: '₹800',
+      description: 'Professional grooming services for all breeds. We use organic shampoos and provide a stress-free environment.',
+      phone: '9876543210',
+      whatsapp: '9876543210',
+      isVerified: true,
+      isPremium: true,
+      isTopRated: true
+    },
+    {
+      id: 's2',
+      vendorId: 'u1',
+      name: 'Doggy Daycare Center',
+      category: 'Daycare',
+      rating: 4.5,
+      reviewCount: 89,
+      image: 'https://images.unsplash.com/photo-1541599540903-216a46ca1df0?auto=format&fit=crop&q=80&w=400',
+      location: 'Bandra East, Mumbai',
+      price: '₹500/day',
+      description: 'Safe and fun daycare for your furry friends. Large play area and experienced staff.',
+      phone: '9876543211',
+      whatsapp: '9876543211',
+      isVerified: true,
+      isPremium: false,
+      isMostBooked: true
+    }
+  ],
   lostFoundPosts: [],
   communityPosts: [
     {
@@ -129,6 +155,12 @@ export const useAppStore = create<AppState>((set) => ({
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     }
   }),
+  cancelSubscription: () => set({
+    subscription: {
+      plan: 'free',
+      status: 'none'
+    }
+  }),
   setServices: (services) => set({ services }),
   addService: (service) => set((state) => ({
     services: [...state.services, { ...service, id: `s${state.services.length + 1}` }]
@@ -169,10 +201,15 @@ export const useAppStore = create<AppState>((set) => ({
       {
         ...inquiry,
         id: Math.random().toString(36).substring(7),
+        userId: state.user?.id || 'guest',
+        status: 'new',
         createdAt: new Date().toISOString()
       },
       ...state.inquiries
     ]
+  })),
+  updateInquiryStatus: (id, status) => set((state) => ({
+    inquiries: state.inquiries.map(inq => inq.id === id ? { ...inq, status } : inq)
   })),
   addCommunityPost: (post) => set((state) => ({
     communityPosts: [

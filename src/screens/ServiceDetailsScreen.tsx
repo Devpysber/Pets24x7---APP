@@ -36,7 +36,7 @@ export const ServiceDetailsScreen: React.FC = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  const handleInquirySubmit = useCallback((inquiryData: { name: string; phone: string; requirement: string }) => {
+  const handleInquirySubmit = useCallback((inquiryData: { name: string; phone: string; requirement: string; preferredTime: string; serviceType: string }) => {
     if (!service) return;
     addInquiry({
       serviceId: service.id,
@@ -44,9 +44,11 @@ export const ServiceDetailsScreen: React.FC = () => {
       serviceImage: service.image,
       userName: inquiryData.name,
       userPhone: inquiryData.phone,
-      message: inquiryData.requirement
+      message: inquiryData.requirement,
+      type: 'inquiry',
+      preferredTime: inquiryData.preferredTime,
+      serviceType: inquiryData.serviceType
     });
-    setIsInquiryOpen(false);
   }, [service, addInquiry]);
 
   if (isLoading) {
@@ -232,6 +234,9 @@ export const ServiceDetailsScreen: React.FC = () => {
         <div className="mx-auto max-w-md flex items-center gap-3">
           <div className="flex gap-2">
             <ActionButtons 
+              serviceId={service.id}
+              serviceName={service.name}
+              serviceImage={service.image}
               phone={service.phone} 
               whatsapp={service.whatsapp} 
               size="lg"

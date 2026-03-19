@@ -13,7 +13,7 @@ export const ExploreScreen: React.FC = () => {
   const [viewType, setViewType] = useState<'grid' | 'list'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPetType, setSelectedPetType] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState('Top Rated');
+  const [sortBy, setSortBy] = useState<'Top Rated' | 'Most Booked' | 'Price: Low to High'>('Top Rated');
 
   // Filter and Sort Logic
   const filteredServices = useMemo(() => {
@@ -33,13 +33,24 @@ export const ExploreScreen: React.FC = () => {
       result = result.filter(s => s.category.includes(selectedPetType));
     }
 
-    // Sort: Premium first, then by rating
+    // Sort: Premium first, then by selected criteria
     result.sort((a, b) => {
+      // Premium always first
       if (a.isPremium && !b.isPremium) return -1;
       if (!a.isPremium && b.isPremium) return 1;
       
       if (sortBy === 'Top Rated') {
-        return b.rating - a.rating;
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (sortBy === 'Most Booked') {
+        if (a.isMostBooked && !b.isMostBooked) return -1;
+        if (!a.isMostBooked && b.isMostBooked) return 1;
+        return (b.reviewCount || 0) - (a.reviewCount || 0);
+      }
+      if (sortBy === 'Price: Low to High') {
+        const priceA = parseInt(a.price?.replace(/[^0-9]/g, '') || '0');
+        const priceB = parseInt(b.price?.replace(/[^0-9]/g, '') || '0');
+        return priceA - priceB;
       }
       return 0;
     });
@@ -101,10 +112,26 @@ export const ExploreScreen: React.FC = () => {
 
           <div className="h-4 w-[1px] bg-gray-200 flex-shrink-0" />
 
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-black/5 text-gray-600 text-xs font-medium whitespace-nowrap">
-            {sortBy}
-            <ChevronDown className="h-3 w-3" />
-          </button>
+          <div className="relative group">
+            <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-black/5 text-gray-600 text-xs font-medium whitespace-nowrap hover:bg-gray-50 transition-colors">
+              {sortBy}
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              {(['Top Rated', 'Most Booked', 'Price: Low to High'] as const).map(option => (
+                <button
+                  key={option}
+                  onClick={() => setSortBy(option)}
+                  className={cn(
+                    "w-full text-left px-4 py-2 text-xs font-medium hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl transition-colors",
+                    sortBy === option ? "text-indigo-600 bg-indigo-50/50" : "text-gray-600"
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

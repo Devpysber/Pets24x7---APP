@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   Plus, 
@@ -14,40 +14,120 @@ import {
   CheckCircle,
   AlertCircle,
   Zap,
-  Crown
+  Crown,
+  Image as ImageIcon,
+  Camera,
+  Save,
+  X,
+  Phone,
+  MapPin,
+  Check,
+  Clock
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PetService } from '../types';
+import { PetService, Inquiry, InquiryStatus } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Link, useNavigate } from 'react-router-dom';
 import { LeadPurchaseModal } from '../components/LeadPurchaseModal';
+import { Button } from '../components/Button';
+import { Card } from '../components/Card';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export default function VendorDashboardScreen() {
-  const { user, services, inquiries, subscription, updateSubscription, deleteService, leadCredits } = useAppStore();
+  const { user, services, inquiries, subscription, updateSubscription, cancelSubscription, addService, updateService, deleteService, updateInquiryStatus, leadCredits } = useAppStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'listings' | 'leads' | 'subscription'>('overview');
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<PetService | null>(null);
+  const [isAddingService, setIsAddingService] = useState(false);
+  const [newService, setNewService] = useState<Partial<PetService>>({
+    name: '',
+    category: 'Grooming',
+    location: '',
+    phone: '',
+    whatsapp: '',
+    description: '',
+    price: '',
+    image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=400',
+    rating: 5.0,
+    reviewCount: 0,
+    isVerified: false,
+    isPremium: false
+  });
+  const [leadFilter, setLeadFilter] = useState<InquiryStatus | 'all'>('all');
   const navigate = useNavigate();
 
-  // Filter services owned by this vendor (mocking by checking if it's not verified or just all for now)
-  const myServices = services.filter(s => s.id === 's1'); // Mocking s1 as vendor's listing
-  const myLeads = inquiries.filter(i => i.serviceId === 's1');
+  // Filter services owned by this vendor
+  const myServices = services.filter(s => s.vendorId === user?.id); 
+  const myLeads = inquiries.filter(i => myServices.some(s => s.id === i.serviceId));
+
+  const filteredLeads = leadFilter === 'all' 
+    ? myLeads 
+    : myLeads.filter(l => l.status === leadFilter);
 
   const stats = [
     { label: 'Total Listings', value: myServices.length, icon: LayoutDashboard, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Active Leads', value: myLeads.length, icon: MessageSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Active Leads', value: myLeads.filter(l => l.status === 'new').length, icon: MessageSquare, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Lead Credits', value: leadCredits, icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50', action: () => setIsLeadModalOpen(true) },
     { label: 'Profile Views', value: '1.2k', icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   ];
 
+  const handleUpdateService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingService) {
+      updateService(editingService.id, editingService);
+      setEditingService(null);
+    }
+  };
+
+  const handleAddService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user) {
+      addService({
+        ...newService as PetService,
+        vendorId: user.id,
+      });
+      setIsAddingService(false);
+      setNewService({
+        name: '',
+        category: 'Grooming',
+        location: '',
+        phone: '',
+        whatsapp: '',
+        description: '',
+        price: '',
+        image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=400',
+        rating: 5.0,
+        reviewCount: 0,
+        isVerified: false,
+        isPremium: false
+      });
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEditing: boolean) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      if (isEditing && editingService) {
+        setEditingService({ ...editingService, image: url });
+      } else {
+        setNewService({ ...newService, image: url });
+      }
+    }
+  };
+
+  const handleStatusChange = (leadId: string, status: InquiryStatus) => {
+    updateInquiryStatus(leadId, status);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-6 sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 px-4 py-6 sticky top-0 z-40">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Vendor Dashboard</h1>
@@ -77,7 +157,7 @@ export default function VendorDashboardScreen() {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-2xl mx-auto">
         {activeTab === 'overview' && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -117,11 +197,23 @@ export default function VendorDashboardScreen() {
                 {myLeads.length > 0 ? (
                   myLeads.slice(0, 3).map((lead) => (
                     <div key={lead.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-slate-900">{lead.userName}</div>
-                        <div className="text-xs text-slate-500">{lead.message.slice(0, 30)}...</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                          {lead.userName[0]}
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900 text-sm">{lead.userName}</div>
+                          <div className="text-[10px] text-slate-500">{lead.serviceType || lead.type}</div>
+                        </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-300" />
+                      <div className={cn(
+                        "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase",
+                        lead.status === 'new' ? "bg-blue-50 text-blue-600" :
+                        lead.status === 'contacted' ? "bg-amber-50 text-amber-600" :
+                        "bg-gray-50 text-gray-600"
+                      )}>
+                        {lead.status}
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -152,7 +244,7 @@ export default function VendorDashboardScreen() {
                     : 'Upgrade to Premium to get 5x more leads and featured placement.'}
                 </p>
                 <button 
-                  onClick={() => navigate('/subscription')}
+                  onClick={() => setActiveTab('subscription')}
                   className="w-full bg-white text-indigo-700 font-bold py-3 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {subscription.plan === 'premium' ? 'View Plan Details' : 'Upgrade to Premium'}
@@ -171,7 +263,10 @@ export default function VendorDashboardScreen() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">My Listings</h2>
-              <button className="flex items-center space-x-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+              <button 
+                onClick={() => setIsAddingService(true)}
+                className="flex items-center space-x-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium active:scale-95 transition-transform"
+              >
                 <Plus className="w-4 h-4" />
                 <span>Add New</span>
               </button>
@@ -180,7 +275,12 @@ export default function VendorDashboardScreen() {
             <div className="space-y-4">
               {myServices.map((service) => (
                 <div key={service.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex space-x-4">
-                  <img src={service.image} alt={service.name} className="w-20 h-20 rounded-xl object-cover" />
+                  <div className="relative group">
+                    <img src={service.image} alt={service.name} className="w-24 h-24 rounded-xl object-cover" />
+                    <button className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl text-white">
+                      <Camera className="w-6 h-6" />
+                    </button>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
@@ -188,7 +288,10 @@ export default function VendorDashboardScreen() {
                         <p className="text-xs text-slate-500">{service.category}</p>
                       </div>
                       <div className="flex space-x-2">
-                        <button className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors">
+                        <button 
+                          onClick={() => setEditingService(service)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
+                        >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button 
@@ -205,12 +308,20 @@ export default function VendorDashboardScreen() {
                         {service.rating}
                       </div>
                       <div className="text-xs text-slate-400">{service.reviewCount} reviews</div>
-                      {service.isVerified && (
-                        <div className="flex items-center text-emerald-600 text-[10px] font-bold uppercase">
-                          <CheckCircle className="w-3 h-3 mr-0.5" />
-                          Verified
+                      {service.isPremium && (
+                        <div className="flex items-center text-indigo-600 text-[10px] font-bold uppercase">
+                          <Crown className="w-3 h-3 mr-0.5" />
+                          Premium
                         </div>
                       )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                        Manage Photos
+                      </button>
+                      <button className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-50 px-2 py-1 rounded-lg">
+                        View Public
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -225,10 +336,27 @@ export default function VendorDashboardScreen() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <h2 className="text-lg font-bold text-slate-900">Customer Leads</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">Customer Leads</h2>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                {(['all', 'new', 'contacted', 'closed'] as const).map(status => (
+                  <button
+                    key={status}
+                    onClick={() => setLeadFilter(status)}
+                    className={cn(
+                      "px-2 py-1 text-[10px] font-bold uppercase rounded-md transition-all",
+                      leadFilter === status ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+                    )}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4">
-              {myLeads.length > 0 ? (
-                myLeads.map((lead) => (
+              {filteredLeads.length > 0 ? (
+                filteredLeads.map((lead) => (
                   <div key={lead.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
@@ -237,20 +365,53 @@ export default function VendorDashboardScreen() {
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">{lead.userName}</div>
-                          <div className="text-[10px] text-slate-400">{new Date(lead.createdAt).toLocaleDateString()}</div>
+                          <div className="text-[10px] text-slate-400">{new Date(lead.createdAt).toLocaleDateString()} at {new Date(lead.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
                       </div>
-                      <button className="text-xs text-emerald-600 font-bold px-3 py-1 border border-emerald-100 rounded-full bg-emerald-50">
-                        Reply
-                      </button>
+                      <select 
+                        value={lead.status}
+                        onChange={(e) => handleStatusChange(lead.id, e.target.value as InquiryStatus)}
+                        className={cn(
+                          "text-[10px] font-bold uppercase px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-500 outline-none",
+                          lead.status === 'new' ? "bg-blue-50 text-blue-600" :
+                          lead.status === 'contacted' ? "bg-amber-50 text-amber-600" :
+                          "bg-gray-50 text-gray-600"
+                        )}
+                      >
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="closed">Closed</option>
+                      </select>
                     </div>
-                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl italic">
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl">
+                        <Zap className="h-3 w-3 text-indigo-500" />
+                        <span className="font-bold uppercase">{lead.serviceType || 'General'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl">
+                        <Clock className="h-3 w-3 text-indigo-500" />
+                        <span className="font-bold uppercase">{lead.preferredTime || 'Anytime'}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-600 bg-indigo-50/30 p-3 rounded-xl italic mb-3">
                       "{lead.message}"
                     </p>
-                    <div className="mt-3 flex items-center space-x-4 text-xs text-slate-500">
-                      <div className="flex items-center">
-                        <MessageSquare className="w-3 h-3 mr-1" />
-                        {lead.userPhone}
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <a href={`tel:${lead.userPhone}`} className="flex items-center gap-1 text-xs font-bold text-indigo-600">
+                          <Phone className="w-3 h-3" />
+                          Call
+                        </a>
+                        <a href={`https://wa.me/${lead.userPhone}`} className="flex items-center gap-1 text-xs font-bold text-emerald-600">
+                          <MessageSquare className="w-3 h-3" />
+                          WhatsApp
+                        </a>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium">
+                        Via {lead.type}
                       </div>
                     </div>
                   </div>
@@ -260,8 +421,8 @@ export default function VendorDashboardScreen() {
                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageSquare className="w-8 h-8 text-slate-300" />
                   </div>
-                  <h3 className="text-slate-900 font-bold">No leads yet</h3>
-                  <p className="text-slate-500 text-sm">When customers inquire about your services, they will appear here.</p>
+                  <h3 className="text-slate-900 font-bold">No leads found</h3>
+                  <p className="text-slate-500 text-sm">Try changing the filter or wait for new inquiries.</p>
                 </div>
               )}
             </div>
@@ -274,67 +435,367 @@ export default function VendorDashboardScreen() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            {/* Current Plan Card */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Subscription Status</h2>
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl mb-6">
+              <div className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl mb-6">
                 <div>
-                  <div className="text-xs text-slate-500 uppercase font-bold tracking-wider">Current Plan</div>
-                  <div className="text-xl font-bold text-slate-900 capitalize">{subscription.plan}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Current Active Plan</div>
+                  <div className="text-2xl font-bold text-slate-900 capitalize flex items-center gap-2">
+                    {subscription.plan}
+                    {subscription.plan === 'premium' && <Crown className="w-6 h-6 text-amber-500 fill-amber-500" />}
+                  </div>
                 </div>
                 <div className={cn(
-                  "px-3 py-1 rounded-full text-xs font-bold uppercase",
+                  "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
                   subscription.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
                 )}>
                   {subscription.status === 'none' ? 'Inactive' : subscription.status}
                 </div>
               </div>
 
-              {subscription.plan === 'free' && (
-                <div className="space-y-4">
-                  <div className="p-4 border-2 border-emerald-100 rounded-2xl bg-emerald-50/30">
-                    <h3 className="font-bold text-emerald-900 mb-2">Upgrade to Premium</h3>
-                    <ul className="space-y-2 mb-6">
-                      {[
-                        'Priority listing in search results',
-                        'Verified badge on profile',
-                        'Unlimited customer leads',
-                        'Detailed performance analytics',
-                        'Featured placement on homepage'
-                      ].map((feature, i) => (
-                        <li key={i} className="flex items-center text-sm text-emerald-800">
-                          <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
+              {subscription.plan === 'premium' && (
+                <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 mb-6">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white">
+                      <Check className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-indigo-900">Premium Active</h3>
+                      <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Renewing on {new Date(subscription.expiryDate!).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-indigo-700 leading-relaxed mb-4">
+                    Your business is currently appearing in top search results and has the verified badge.
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <button className="text-xs font-bold text-indigo-600 hover:underline">
+                      Manage Billing & Invoices
+                    </button>
                     <button 
-                      onClick={() => updateSubscription('premium')}
-                      className="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md hover:bg-emerald-700 transition-all active:scale-95"
+                      onClick={() => cancelSubscription()}
+                      className="text-xs font-bold text-red-500 hover:underline"
                     >
-                      Upgrade for ₹999/month
+                      Cancel Subscription
                     </button>
                   </div>
                 </div>
               )}
 
-              {subscription.plan === 'premium' && (
-                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-bold text-blue-900">Premium Active</h3>
+              {/* Comparison Table */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-slate-900">Plan Comparison</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className={cn(
+                    "p-5 rounded-3xl border-2 transition-all",
+                    subscription.plan === 'free' ? "border-indigo-600 bg-indigo-50/30" : "border-slate-100 bg-white"
+                  )}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-slate-900">Free Starter</h4>
+                      <div className="text-lg font-bold text-slate-900">₹0<span className="text-xs text-slate-400 font-normal">/mo</span></div>
+                    </div>
+                    <ul className="space-y-3 mb-6">
+                      {['Basic Listing', 'Limited Leads', 'Standard Support'].map((f, i) => (
+                        <li key={i} className="flex items-center text-xs text-slate-600">
+                          <Check className="w-4 h-4 mr-2 text-slate-400" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {subscription.plan !== 'free' && (
+                      <Button variant="outline" className="w-full rounded-xl border-slate-200 text-slate-600">Downgrade</Button>
+                    )}
                   </div>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Your premium subscription is active until {new Date(subscription.expiryDate!).toLocaleDateString()}.
-                  </p>
-                  <button className="text-sm font-bold text-blue-600 hover:underline">
-                    Cancel Subscription
-                  </button>
+
+                  <div className={cn(
+                    "p-5 rounded-3xl border-2 transition-all relative overflow-hidden",
+                    subscription.plan === 'premium' ? "border-indigo-600 bg-indigo-50/30" : "border-amber-200 bg-amber-50/30"
+                  )}>
+                    <div className="absolute top-0 right-0 bg-amber-500 text-white text-[9px] font-bold uppercase px-3 py-1 rounded-bl-xl">Recommended</div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                        Premium Pro
+                        <Crown className="w-4 h-4 text-amber-500 fill-amber-500" />
+                      </h4>
+                      <div className="text-lg font-bold text-slate-900">₹999<span className="text-xs text-slate-400 font-normal">/mo</span></div>
+                    </div>
+                    <ul className="space-y-3 mb-6">
+                      {[
+                        'Top Search Placement',
+                        'Verified Business Badge',
+                        'Unlimited Leads',
+                        'Featured on Homepage',
+                        'Priority Support 24/7'
+                      ].map((f, i) => (
+                        <li key={i} className="flex items-center text-xs text-slate-900 font-medium">
+                          <Check className="w-4 h-4 mr-2 text-indigo-600" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {subscription.plan !== 'premium' ? (
+                      <Button 
+                        onClick={() => updateSubscription('premium')}
+                        className="w-full rounded-xl bg-indigo-600 shadow-lg shadow-indigo-100"
+                      >
+                        Upgrade Now
+                      </Button>
+                    ) : (
+                      <div className="text-center text-xs font-bold text-indigo-600 uppercase tracking-wider">Current Active Plan</div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           </motion.div>
         )}
       </div>
+
+      {/* Edit Listing Modal */}
+      <AnimatePresence>
+        {editingService && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingService(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="relative w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-slate-900">Edit Business</h2>
+                  <button onClick={() => setEditingService(null)} className="p-2 rounded-full bg-slate-100 text-slate-500">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdateService} className="space-y-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Business Name</label>
+                    <input 
+                      required
+                      type="text" 
+                      value={editingService.name}
+                      onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input 
+                        required
+                        type="text" 
+                        value={editingService.location}
+                        onChange={(e) => setEditingService({ ...editingService, location: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Phone</label>
+                      <input 
+                        required
+                        type="tel" 
+                        value={editingService.phone}
+                        onChange={(e) => setEditingService({ ...editingService, phone: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">WhatsApp</label>
+                      <input 
+                        required
+                        type="tel" 
+                        value={editingService.whatsapp}
+                        onChange={(e) => setEditingService({ ...editingService, whatsapp: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Description</label>
+                    <textarea 
+                      required
+                      rows={3}
+                      value={editingService.description}
+                      onChange={(e) => setEditingService({ ...editingService, description: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium resize-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Business Image</label>
+                    <div className="flex items-center gap-4">
+                      <img src={editingService.image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-black/5" />
+                      <label className="flex-1 h-16 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all cursor-pointer">
+                        <Camera className="h-5 w-5 mb-1" />
+                        <span className="text-[10px] font-bold uppercase">Change Photo</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => handleImageUpload(e, true)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full h-12 mt-2 bg-indigo-600 shadow-lg shadow-indigo-100">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Listing Modal */}
+      <AnimatePresence>
+        {isAddingService && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddingService(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              className="relative w-full max-w-md bg-white rounded-t-[32px] sm:rounded-[32px] overflow-hidden shadow-2xl"
+            >
+              <div className="p-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-slate-900">Add New Listing</h2>
+                  <button onClick={() => setIsAddingService(false)} className="p-2 rounded-full bg-slate-100 text-slate-500">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAddService} className="space-y-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Business Name</label>
+                    <input 
+                      required
+                      type="text" 
+                      placeholder="e.g. Pawsome Grooming"
+                      value={newService.name}
+                      onChange={(e) => setNewService({ ...newService, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Category</label>
+                    <select 
+                      value={newService.category}
+                      onChange={(e) => setNewService({ ...newService, category: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    >
+                      <option value="Grooming">Grooming</option>
+                      <option value="Daycare">Daycare</option>
+                      <option value="Vet">Vet</option>
+                      <option value="Training">Training</option>
+                      <option value="Boarding">Boarding</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Location</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <input 
+                        required
+                        type="text" 
+                        placeholder="e.g. Bandra, Mumbai"
+                        value={newService.location}
+                        onChange={(e) => setNewService({ ...newService, location: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Phone</label>
+                      <input 
+                        required
+                        type="tel" 
+                        placeholder="Phone number"
+                        value={newService.phone}
+                        onChange={(e) => setNewService({ ...newService, phone: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">WhatsApp</label>
+                      <input 
+                        required
+                        type="tel" 
+                        placeholder="WhatsApp number"
+                        value={newService.whatsapp}
+                        onChange={(e) => setNewService({ ...newService, whatsapp: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Description</label>
+                    <textarea 
+                      required
+                      rows={3}
+                      placeholder="Tell customers about your business..."
+                      value={newService.description}
+                      onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium resize-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Business Image</label>
+                    <div className="flex items-center gap-4">
+                      <img src={newService.image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-black/5" />
+                      <label className="flex-1 h-16 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all cursor-pointer">
+                        <Camera className="h-5 w-5 mb-1" />
+                        <span className="text-[10px] font-bold uppercase">Upload Photo</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => handleImageUpload(e, false)}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full h-12 mt-2 bg-emerald-600 shadow-lg shadow-emerald-100">
+                    <Save className="h-4 w-4 mr-2" />
+                    Create Listing
+                  </Button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <LeadPurchaseModal 
         isOpen={isLeadModalOpen} 

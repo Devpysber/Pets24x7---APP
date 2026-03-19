@@ -1,4 +1,4 @@
-import { Inquiry } from '../store/useAppStore';
+import { Inquiry } from '../types';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

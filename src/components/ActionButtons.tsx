@@ -2,8 +2,12 @@ import React, { memo, useCallback } from 'react';
 import { Button } from './Button';
 import { Phone, MessageCircle, Send } from 'lucide-react';
 import { cn } from '../utils/theme';
+import { useAppStore } from '../store/useAppStore';
 
 interface ActionButtonsProps {
+  serviceId: string;
+  serviceName: string;
+  serviceImage: string;
   phone: string;
   whatsapp: string;
   onInquiry?: () => void;
@@ -13,6 +17,9 @@ interface ActionButtonsProps {
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = memo(({ 
+  serviceId,
+  serviceName,
+  serviceImage,
   phone, 
   whatsapp, 
   onInquiry, 
@@ -20,15 +27,31 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
   size = 'md',
   showInquiry = true
 }) => {
+  const { addInquiry, user } = useAppStore();
+
+  const trackLead = useCallback((type: 'call' | 'whatsapp') => {
+    addInquiry({
+      serviceId,
+      serviceName,
+      serviceImage,
+      userName: user?.name || 'Guest User',
+      userPhone: user?.email || '', // Fallback or use a proper phone if available
+      message: `User clicked ${type} button`,
+      type,
+    });
+  }, [addInquiry, serviceId, serviceName, serviceImage, user]);
+
   const handleCall = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    trackLead('call');
     window.location.href = `tel:${phone}`;
-  }, [phone]);
+  }, [phone, trackLead]);
 
   const handleWhatsapp = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    trackLead('whatsapp');
     window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank');
-  }, [whatsapp]);
+  }, [whatsapp, trackLead]);
 
   const buttonSizeClass = cn(
     size === 'sm' ? "h-8 w-8 p-0" : size === 'md' ? "h-10 w-10 p-0" : "h-12 w-12 p-0"
