@@ -97,3 +97,16 @@ export interface CommunityPost {
   comments: CommunityComment[];
   createdAt: string;
 }
+
+export type NotificationType = 'lead' | 'message' | 'lost_found' | 'reminder' | 'system';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  link?: string;
+  metadata?: any;
+}

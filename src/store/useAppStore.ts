@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment, Inquiry } from '../types';
+import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment, Inquiry, Notification } from '../types';
 
 interface AppState {
   user: User | null;
@@ -11,6 +11,7 @@ interface AppState {
   favorites: string[];
   inquiries: Inquiry[];
   communityPosts: CommunityPost[];
+  notifications: Notification[];
   userRole: 'user' | 'vendor' | 'admin';
   leadCredits: number;
   subscription: {
@@ -18,6 +19,8 @@ interface AppState {
     expiryDate?: string;
     status: 'active' | 'expired' | 'none';
   };
+  isInquiryModalOpen: boolean;
+  selectedServiceForInquiry: { id: string; name: string } | null;
   setUser: (user: User | null) => void;
   setUserRole: (role: 'user' | 'vendor' | 'admin') => void;
   buyLeads: (amount: number) => void;
@@ -39,6 +42,12 @@ interface AppState {
   toggleLikeCommunityPost: (postId: string) => void;
   addCommunityComment: (postId: string, text: string) => void;
   setLostFoundPosts: (posts: LostFoundPost[]) => void;
+  addNotification: (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => void;
+  markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
+  clearNotifications: () => void;
+  openInquiryModal: (service: { id: string; name: string }) => void;
+  closeInquiryModal: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -55,9 +64,40 @@ export const useAppStore = create<AppState>((set) => ({
     plan: 'free',
     status: 'none'
   },
+  isInquiryModalOpen: false,
+  selectedServiceForInquiry: null,
   location: 'Mumbai',
   favorites: [],
   inquiries: [],
+  notifications: [
+    {
+      id: 'n1',
+      type: 'lead',
+      title: 'New Lead Received!',
+      message: 'Someone is interested in "Happy Paws Grooming". Check it out!',
+      isRead: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+      link: '/vendor/dashboard'
+    },
+    {
+      id: 'n2',
+      type: 'reminder',
+      title: 'Complete Your Profile',
+      message: 'A complete profile gets 3x more leads. Add your business images now!',
+      isRead: false,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+      link: '/vendor/dashboard'
+    },
+    {
+      id: 'n3',
+      type: 'lost_found',
+      title: 'Lost Pet Alert!',
+      message: 'A Golden Retriever was reported lost near your location.',
+      isRead: true,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      link: '/lost-found'
+    }
+  ],
   banners: [
     {
       id: 'b1',
@@ -255,4 +295,31 @@ export const useAppStore = create<AppState>((set) => ({
     })
   })),
   setLostFoundPosts: (lostFoundPosts) => set({ lostFoundPosts }),
+  addNotification: (notification) => set((state) => ({
+    notifications: [
+      {
+        ...notification,
+        id: Math.random().toString(36).substring(7),
+        isRead: false,
+        createdAt: new Date().toISOString()
+      },
+      ...state.notifications
+    ]
+  })),
+  markNotificationAsRead: (id) => set((state) => ({
+    notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
+  })),
+  markAllNotificationsAsRead: () => set((state) => ({
+    notifications: state.notifications.map(n => ({ ...n, isRead: true }))
+  })),
+  clearNotifications: () => set({ notifications: [] }),
+  openInquiryModal: (service) => set({ 
+    selectedServiceForInquiry: service, 
+    isInquiryModalOpen: true 
+  }),
+  closeInquiryModal: () => set({ 
+    isInquiryModalOpen: false,
+    // Keep selectedServiceForInquiry until modal animation finishes if needed, 
+    // but usually resetting it is fine if the modal handles its own exit animation state
+  }),
 }));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MapPin, Phone, Share2, MessageCircle } from 'lucide-react';
+import { MapPin, Phone, Share2, MessageCircle, MessageSquare } from 'lucide-react';
 import { LostFoundPost } from '../types';
 import { Badge } from './Badge';
 import { Card } from './Card';
@@ -59,23 +59,34 @@ export const LostFoundPostCard: React.FC<LostFoundPostCardProps> = ({ post }) =>
       {/* Post Actions */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4">
-          <button className="text-gray-700 hover:text-indigo-600 transition-colors">
-            <MessageCircle size={24} />
+          <button className="text-gray-700 hover:text-indigo-600 transition-colors p-2 hover:bg-gray-50 rounded-full">
+            <MessageCircle size={22} />
           </button>
           <button 
             onClick={handleShare}
-            className="text-gray-700 hover:text-indigo-600 transition-colors"
+            className="text-gray-700 hover:text-indigo-600 transition-colors p-2 hover:bg-gray-50 rounded-full"
           >
-            <Share2 size={24} />
+            <Share2 size={22} />
           </button>
         </div>
-        <a
-          href={`tel:${post.contactInfo}`}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform"
-        >
-          <Phone size={14} />
-          Contact
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://wa.me/${post.contactInfo}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full shadow-sm active:scale-95 transition-transform"
+            title="WhatsApp"
+          >
+            <MessageSquare size={18} />
+          </a>
+          <a
+            href={`tel:${post.contactInfo}`}
+            className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-md shadow-indigo-100 active:scale-95 transition-transform"
+          >
+            <Phone size={14} />
+            Call
+          </a>
+        </div>
       </div>
 
       {/* Post Content */}

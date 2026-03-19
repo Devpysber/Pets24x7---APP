@@ -193,30 +193,57 @@ export const ProfileScreen: React.FC = () => {
               <div className="flex flex-col gap-4">
                 {inquiries.length > 0 ? (
                   inquiries.map(inquiry => (
-                    <Card key={inquiry.id} className="p-4 border border-black/5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <img 
-                          src={inquiry.serviceImage} 
-                          alt={inquiry.serviceName} 
-                          className="h-10 w-10 rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <h4 className="text-sm font-bold text-gray-900">{inquiry.serviceName}</h4>
-                          <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                            <Calendar className="h-3 w-3" />
-                            <span>{format(new Date(inquiry.createdAt), 'MMM dd, yyyy')}</span>
+                    <Card key={inquiry.id} className="p-4 border border-black/5 hover:border-indigo-100 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="relative">
+                          <img 
+                            src={inquiry.serviceImage} 
+                            alt={inquiry.serviceName} 
+                            className="h-12 w-12 rounded-xl object-cover shadow-sm"
+                          />
+                          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <div className="bg-indigo-600 rounded-full p-1">
+                              <MessageSquare className="h-2 w-2 text-white" />
+                            </div>
                           </div>
                         </div>
-                        <Badge variant="success" className="text-[9px]">Sent</Badge>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-gray-900 truncate">{inquiry.serviceName}</h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                              <Calendar className="h-3 w-3" />
+                              <span>{format(new Date(inquiry.createdAt), 'MMM dd, yyyy')}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-300">•</span>
+                            <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Inquiry</span>
+                          </div>
+                        </div>
+                        <Badge variant="success" className="text-[9px] px-2 py-0.5 rounded-full">Sent</Badge>
                       </div>
-                      <div className="bg-gray-50 rounded-xl p-3">
-                        <p className="text-xs text-gray-600 italic">"{inquiry.message}"</p>
+                      <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100/50">
+                        <p className="text-xs text-gray-600 leading-relaxed italic">
+                          <span className="text-indigo-300 mr-1">"</span>
+                          {inquiry.message}
+                          <span className="text-indigo-300 ml-1">"</span>
+                        </p>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="text-[10px] text-gray-400">
+                          Status: <span className="text-emerald-600 font-bold uppercase">Pending Response</span>
+                        </div>
+                        <button className="text-[10px] font-bold text-indigo-600 hover:underline">
+                          View Details
+                        </button>
                       </div>
                     </Card>
                   ))
                 ) : (
-                  <div className="py-12 text-center">
-                    <p className="text-sm text-gray-400">No inquiry history found.</p>
+                  <div className="py-20 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 text-gray-200" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900">No inquiries yet</h3>
+                    <p className="text-xs text-gray-400 mt-1">Your inquiry history will appear here.</p>
                   </div>
                 )}
               </div>

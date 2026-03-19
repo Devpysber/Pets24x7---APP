@@ -1,12 +1,14 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useServices } from '../hooks/useServices';
 import { useAppStore } from '../store/useAppStore';
 import { ListingCard } from '../components/ListingCard';
 import { SectionHeader } from '../components/SectionHeader';
 import { LoadingSpinner, ErrorMessage } from '../components/Feedback';
+import { Skeleton, ListingSkeleton } from '../components/Skeleton';
 import { Search, ShoppingBag, Stethoscope, Scissors, GraduationCap, Hotel, Calendar } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { ReminderPrompt } from '../components/ReminderPrompt';
 
 const CATEGORIES = [
   { id: '1', name: 'Pet Shops', icon: ShoppingBag, color: 'bg-blue-50 text-blue-600' },
@@ -19,7 +21,8 @@ const CATEGORIES = [
 
 export const HomeScreen: React.FC = () => {
   const { premiumServices, services, isLoading, error, refresh } = useServices();
-  const { banners, location } = useAppStore();
+  const { banners, location, userRole, subscription } = useAppStore();
+  const [showReminder, setShowReminder] = useState(true);
   const navigate = useNavigate();
 
   const handleSeeAllFeatured = useCallback(() => {
@@ -29,6 +32,39 @@ export const HomeScreen: React.FC = () => {
   const handleSeeAllRecommended = useCallback(() => {
     navigate('/explore');
   }, [navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-6 pb-8 px-4 pt-4">
+        <Skeleton className="h-14 w-full rounded-2xl mb-4" />
+        <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="flex flex-col items-center gap-2 min-w-[70px]">
+              <Skeleton className="h-14 w-14 rounded-2xl" />
+              <Skeleton className="h-2 w-10" />
+            </div>
+          ))}
+        </div>
+        <Skeleton className="h-40 w-full rounded-3xl mb-4" />
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-40" />
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+            {[1, 2].map(i => (
+              <div key={i} className="min-w-[260px]">
+                <ListingSkeleton viewType="grid" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-40" />
+          {[1, 2, 3].map(i => (
+            <ListingSkeleton key={i} viewType="list" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-8">
@@ -43,6 +79,24 @@ export const HomeScreen: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* Reminder Prompt for Vendors */}
+      <AnimatePresence>
+        {showReminder && userRole === 'vendor' && subscription.plan === 'free' && (
+          <ReminderPrompt 
+            type="upgrade" 
+            onClose={() => setShowReminder(false)}
+            onAction={() => navigate('/subscription')}
+          />
+        )}
+        {showReminder && userRole === 'vendor' && subscription.plan === 'premium' && (
+          <ReminderPrompt 
+            type="profile" 
+            onClose={() => setShowReminder(false)}
+            onAction={() => navigate('/vendor/dashboard')}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Categories */}
       <section className="px-4">

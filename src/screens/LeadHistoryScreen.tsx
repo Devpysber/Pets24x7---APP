@@ -14,6 +14,7 @@ import {
 import { motion } from 'motion/react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { EmptyState } from '../components/EmptyState';
 import { cn } from '../utils/theme';
 
 export const LeadHistoryScreen: React.FC = () => {
@@ -56,16 +57,13 @@ export const LeadHistoryScreen: React.FC = () => {
 
       <div className="px-4 py-6 max-w-md mx-auto">
         {userInquiries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <MessageSquare className="h-10 w-10 text-gray-400" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">No Inquiries Yet</h2>
-            <p className="text-sm text-gray-500 mb-8 max-w-[240px]">
-              When you contact vendors, your history will appear here.
-            </p>
-            <Button onClick={() => navigate('/')}>Explore Services</Button>
-          </div>
+          <EmptyState 
+            icon={MessageSquare}
+            title="No Inquiries Yet"
+            description="When you contact vendors, your history will appear here. Start exploring services to find what you need!"
+            actionLabel="Explore Services"
+            onAction={() => navigate('/')}
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {userInquiries.map((inquiry, index) => (

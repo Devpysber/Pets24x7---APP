@@ -7,10 +7,30 @@ import { CommunityScreen } from './screens/CommunityScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { ServiceDetailsScreen } from './screens/ServiceDetailsScreen';
 import { LeadHistoryScreen } from './screens/LeadHistoryScreen';
+import NotificationScreen from './screens/NotificationScreen';
 import VendorDashboardScreen from './screens/VendorDashboardScreen';
 import AdminDashboardScreen from './screens/AdminDashboardScreen';
+import { InquiryModal } from './components/InquiryModal';
+import { useAppStore } from './store/useAppStore';
 
 export default function App() {
+  const { isInquiryModalOpen, closeInquiryModal, selectedServiceForInquiry, addInquiry } = useAppStore();
+
+  const handleInquirySubmit = (data: any) => {
+    if (!selectedServiceForInquiry) return;
+    addInquiry({
+      serviceId: selectedServiceForInquiry.id,
+      serviceName: selectedServiceForInquiry.name,
+      serviceImage: 'https://picsum.photos/seed/service/400/400', // Fallback or get from store
+      userName: data.name,
+      userPhone: data.phone,
+      message: data.requirement,
+      type: 'inquiry',
+      preferredTime: data.preferredTime,
+      serviceType: data.serviceType
+    });
+  };
+
   return (
     <BrowserRouter>
       <Routes>
@@ -21,11 +41,19 @@ export default function App() {
           <Route path="/lost-found" element={<LostFoundScreen />} />
           <Route path="/community" element={<CommunityScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
+          <Route path="/notifications" element={<NotificationScreen />} />
           <Route path="/leads" element={<LeadHistoryScreen />} />
           <Route path="/vendor/dashboard" element={<VendorDashboardScreen />} />
           <Route path="/admin/dashboard" element={<AdminDashboardScreen />} />
         </Route>
       </Routes>
+      
+      <InquiryModal 
+        isOpen={isInquiryModalOpen}
+        onClose={closeInquiryModal}
+        serviceName={selectedServiceForInquiry?.name || ''}
+        onSubmit={handleInquirySubmit}
+      />
     </BrowserRouter>
   );
 }

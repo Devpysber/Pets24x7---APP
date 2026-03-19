@@ -13,3 +13,46 @@
 .animate-shimmer {
   animation: shimmer 3s linear infinite;
 }
+
+@layer base {
+  body {
+    @apply text-slate-900 antialiased selection:bg-indigo-100 selection:text-indigo-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-bold;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+  }
+  
+  .premium-shadow {
+    @apply shadow-[0_10px_30px_rgba(0,0,0,0.04)];
+  }
+}

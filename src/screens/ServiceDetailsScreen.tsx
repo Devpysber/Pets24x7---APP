@@ -25,8 +25,7 @@ export const ServiceDetailsScreen: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getServiceById, services, toggleFavorite, isFavorite: checkFavorite, isLoading, error, refresh } = useServices();
-  const { addInquiry } = useAppStore();
-  const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const { openInquiryModal } = useAppStore();
   
   const service = getServiceById(id || '');
   const isFavorite = checkFavorite(id || '');
@@ -35,21 +34,6 @@ export const ServiceDetailsScreen: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
-
-  const handleInquirySubmit = useCallback((inquiryData: { name: string; phone: string; requirement: string; preferredTime: string; serviceType: string }) => {
-    if (!service) return;
-    addInquiry({
-      serviceId: service.id,
-      serviceName: service.name,
-      serviceImage: service.image,
-      userName: inquiryData.name,
-      userPhone: inquiryData.phone,
-      message: inquiryData.requirement,
-      type: 'inquiry',
-      preferredTime: inquiryData.preferredTime,
-      serviceType: inquiryData.serviceType
-    });
-  }, [service, addInquiry]);
 
   if (isLoading) {
     return <div className="pt-20"><LoadingSpinner message="Loading service details..." /></div>;
@@ -247,21 +231,13 @@ export const ServiceDetailsScreen: React.FC = () => {
             </Button>
           </div>
           <Button 
-            onClick={() => setIsInquiryOpen(true)}
+            onClick={() => openInquiryModal({ id: service.id, name: service.name })}
             className="flex-1 h-12 bg-indigo-600 shadow-lg shadow-indigo-100 font-bold"
           >
             Send Inquiry
           </Button>
         </div>
       </div>
-
-      {/* Inquiry Modal */}
-      <InquiryModal 
-        isOpen={isInquiryOpen} 
-        onClose={() => setIsInquiryOpen(false)} 
-        serviceName={service.name} 
-        onSubmit={handleInquirySubmit}
-      />
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { useAppStore } from '../store/useAppStore';
 import { CommunityPostCard } from '../components/CommunityPostCard';
 import { CreateCommunityPostModal } from '../components/CreateCommunityPostModal';
 import { Button } from '../components/Button';
+import { Skeleton, PostSkeleton } from '../components/Skeleton';
+import { EmptyState, NoPostsState } from '../components/EmptyState';
 import { Plus, Search, Filter, MessageSquare, Heart, Share2, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils/theme';
@@ -14,6 +16,13 @@ export const CommunityScreen: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<CommunityCategory>('All');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filteredPosts = communityPosts.filter(post => {
     const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
@@ -93,37 +102,29 @@ export const CommunityScreen: React.FC = () => {
 
       {/* Feed */}
       <section className="px-4">
-        <AnimatePresence mode="popLayout">
-          {filteredPosts.length > 0 ? (
-            filteredPosts.map((post, index) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-              >
-                <CommunityPostCard post={post} />
-              </motion.div>
-            ))
-          ) : (
-            <div className="py-20 text-center">
-              <div className="h-20 w-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-10 w-10 text-gray-300" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">No posts found</h3>
-              <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                Be the first to share a tip or story with the community!
-              </p>
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="mt-6 bg-indigo-600"
-              >
-                Create First Post
-              </Button>
-            </div>
-          )}
-        </AnimatePresence>
+        {isLoading ? (
+          <div className="space-y-6">
+            {[1, 2, 3].map(i => <PostSkeleton key={i} />)}
+          </div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {filteredPosts.length > 0 ? (
+              filteredPosts.map((post, index) => (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                >
+                  <CommunityPostCard post={post} />
+                </motion.div>
+              ))
+            ) : (
+              <NoPostsState onAction={() => setIsCreateModalOpen(true)} />
+            )}
+          </AnimatePresence>
+        )}
       </section>
 
       {/* Create Post Modal */}

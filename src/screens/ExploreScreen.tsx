@@ -2,6 +2,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useServices } from '../hooks/useServices';
 import { ListingCard } from '../components/ListingCard';
 import { LoadingSpinner, ErrorMessage } from '../components/Feedback';
+import { ListingSkeleton } from '../components/Skeleton';
+import { NoResultsState } from '../components/EmptyState';
 import { Search, LayoutGrid, List, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { cn } from '../utils/theme';
 import { motion, AnimatePresence } from 'motion/react';
@@ -138,7 +140,14 @@ export const ExploreScreen: React.FC = () => {
       {/* Results List */}
       <div className="p-4">
         {isLoading ? (
-          <LoadingSpinner message="Searching for services..." />
+          <div className={cn(
+            "grid gap-4",
+            viewType === 'grid' ? "grid-cols-2" : "grid-cols-1"
+          )}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <ListingSkeleton key={i} viewType={viewType} />
+            ))}
+          </div>
         ) : error ? (
           <ErrorMessage message={error} onRetry={refresh} />
         ) : (
@@ -173,10 +182,12 @@ export const ExploreScreen: React.FC = () => {
             </motion.div>
 
             {filteredServices.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center gap-2">
-                <p className="text-sm font-bold text-gray-900">No services found</p>
-                <p className="text-xs text-gray-500">Try adjusting your filters or search query.</p>
-              </div>
+              <NoResultsState 
+                onAction={() => {
+                  setSearchQuery('');
+                  setSelectedPetType(null);
+                }} 
+              />
             )}
 
             {filteredServices.length > 0 && (

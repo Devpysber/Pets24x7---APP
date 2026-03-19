@@ -6,10 +6,12 @@ import { useAppStore } from '../store/useAppStore';
 import { LoginModal } from '../components/LoginModal';
 
 export const AppLayout: React.FC = () => {
-  const { location: userLocation, user } = useAppStore();
+  const { location: userLocation, user, notifications } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const isDetailView = location.pathname.startsWith('/service/');
 
@@ -27,9 +29,16 @@ export const AppLayout: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button className="relative p-2 rounded-full bg-gray-50 border border-black/5">
+                <button 
+                  onClick={() => navigate('/notifications')}
+                  className="relative p-2 rounded-full bg-gray-50 border border-black/5 hover:bg-gray-100 transition-colors"
+                >
                   <Bell className="h-5 w-5 text-gray-600" />
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </button>
                 {user ? (
                   <button 

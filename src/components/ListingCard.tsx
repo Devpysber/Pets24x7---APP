@@ -38,8 +38,8 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
         'flex transition-all duration-500 cursor-pointer active:scale-[0.98] relative overflow-hidden group',
         isGrid ? 'flex-col' : 'flex-row p-3 gap-4',
         service.isPremium 
-          ? 'border-2 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.15)] ring-1 ring-amber-200 bg-gradient-to-br from-white to-amber-50/30 scale-[1.02] z-10' 
-          : 'border border-black/5 bg-white grayscale-[0.2] opacity-90 hover:grayscale-0 hover:opacity-100',
+          ? 'border-2 border-amber-400 shadow-[0_10px_30px_rgba(251,191,36,0.15)] ring-1 ring-amber-200 bg-gradient-to-br from-white to-amber-50/30 scale-[1.02] z-10' 
+          : 'border border-black/5 bg-white hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5',
         className
       )}
     >
@@ -128,7 +128,8 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
           phone={service.phone} 
           whatsapp={service.whatsapp} 
           size={isGrid ? 'sm' : 'md'}
-          showInquiry={false} // Inquiry usually handled in details screen or separately
+          showInquiry={true}
+          className="mt-1"
         />
       </div>
     </Card>

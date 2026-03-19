@@ -27,7 +27,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
   size = 'md',
   showInquiry = true
 }) => {
-  const { addInquiry, user } = useAppStore();
+  const { addInquiry, user, openInquiryModal } = useAppStore();
 
   const trackLead = useCallback((type: 'call' | 'whatsapp') => {
     addInquiry({
@@ -53,6 +53,16 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
     window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank');
   }, [whatsapp, trackLead]);
 
+  const handleInquiryClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackLead('inquiry');
+    if (onInquiry) {
+      onInquiry();
+    } else {
+      openInquiryModal({ id: serviceId, name: serviceName });
+    }
+  }, [onInquiry, openInquiryModal, serviceId, serviceName, trackLead]);
+
   const buttonSizeClass = cn(
     size === 'sm' ? "h-8 w-8 p-0" : size === 'md' ? "h-10 w-10 p-0" : "h-12 w-12 p-0"
   );
@@ -65,7 +75,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
         variant="primary" 
         size="sm" 
         onClick={handleCall}
-        className={cn(buttonSizeClass, "bg-indigo-600 hover:bg-indigo-700 shadow-sm")}
+        className={cn(buttonSizeClass, "bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-transform active:scale-90")}
+        title="Call Now"
       >
         <Phone size={iconSize} />
       </Button>
@@ -73,21 +84,19 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
         variant="secondary" 
         size="sm" 
         onClick={handleWhatsapp}
-        className={cn(buttonSizeClass, "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm")}
+        className={cn(buttonSizeClass, "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-transform active:scale-90")}
+        title="WhatsApp"
       >
         <MessageCircle size={iconSize} />
       </Button>
-      {showInquiry && onInquiry && (
+      {showInquiry && (
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={(e) => {
-            e.stopPropagation();
-            onInquiry();
-          }}
+          onClick={handleInquiryClick}
           className={cn(
             size === 'sm' ? "h-8 px-3" : size === 'md' ? "h-10 px-4" : "h-12 px-6",
-            "flex-1 font-bold text-indigo-600 border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50"
+            "flex-1 font-bold text-indigo-600 border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 transition-all active:scale-95"
           )}
         >
           <Send size={iconSize - 4} className="mr-2" />
