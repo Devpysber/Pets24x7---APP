@@ -3,7 +3,7 @@ import { PetService } from '../types';
 import { Card } from './Card';
 import { Badge } from './Badge';
 import { Button } from './Button';
-import { Star, MapPin, Heart, Zap, Award, TrendingUp } from 'lucide-react';
+import { Star, MapPin, Heart, Zap, Award, TrendingUp, ShieldCheck } from 'lucide-react';
 import { cn } from '../utils/theme';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
@@ -38,18 +38,27 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
         'flex transition-all duration-500 cursor-pointer active:scale-[0.98] relative overflow-hidden group',
         isGrid ? 'flex-col' : 'flex-row p-3 gap-4',
         service.isPremium 
-          ? 'border-2 border-amber-400 shadow-[0_10px_30px_rgba(251,191,36,0.15)] ring-1 ring-amber-200 bg-gradient-to-br from-white to-amber-50/30 scale-[1.02] z-10' 
+          ? 'border-2 border-amber-400 shadow-[0_20px_50px_rgba(251,191,36,0.25)] ring-1 ring-amber-200 bg-gradient-to-br from-white via-amber-50/20 to-amber-100/30 scale-[1.03] z-10' 
           : 'border border-black/5 bg-white hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5',
         className
       )}
     >
       {service.isPremium && (
         <>
-          <div className="absolute -right-12 -top-12 w-32 h-32 bg-amber-400/20 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-400/30 transition-colors" />
-          <div className="absolute -left-12 -bottom-12 w-32 h-32 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-16 -top-16 w-48 h-48 bg-amber-400/30 rounded-full blur-[60px] pointer-events-none group-hover:bg-amber-400/40 transition-colors animate-pulse-slow" />
+          <div className="absolute -left-16 -bottom-16 w-48 h-48 bg-indigo-400/20 rounded-full blur-[60px] pointer-events-none animate-pulse-slow" />
           
           {/* Animated Glow Border */}
-          <div className="absolute inset-0 border-2 border-transparent bg-gradient-to-r from-amber-400/0 via-amber-400/40 to-amber-400/0 bg-[length:200%_100%] animate-shimmer pointer-events-none opacity-50" />
+          <div className="absolute inset-0 border-2 border-transparent bg-gradient-to-r from-amber-400/0 via-amber-400/60 to-amber-400/0 bg-[length:200%_100%] animate-shimmer pointer-events-none opacity-70" />
+          
+          {/* Premium Ribbon */}
+          {isGrid ? (
+            <div className="absolute -right-10 top-6 rotate-45 bg-gradient-to-r from-amber-400 to-amber-600 text-white text-[8px] font-black uppercase tracking-widest py-1 w-32 text-center shadow-lg z-20">
+              Premium
+            </div>
+          ) : (
+            <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-amber-400 via-amber-600 to-amber-400 z-20" />
+          )}
         </>
       )}
       
@@ -69,6 +78,12 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
         
         <div className="absolute top-2 left-2 flex flex-col gap-1.5">
           {service.isPremium && <PremiumBadge />}
+          {service.isVerified && (
+            <div className="bg-blue-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-lg shadow-blue-500/20">
+              <ShieldCheck className="h-2.5 w-2.5" />
+              <span className="text-[8px] font-black uppercase tracking-tighter">Verified</span>
+            </div>
+          )}
           {service.isTopRated && (
             <div className="bg-emerald-500 text-white px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-lg shadow-emerald-500/20 animate-pulse">
               <Award className="h-2.5 w-2.5" />
@@ -110,10 +125,16 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
             {!isGrid && <span className="text-[9px] text-gray-400">({service.reviewCount} reviews)</span>}
           </div>
           <h3 className={cn(
-            'font-bold text-gray-900 leading-tight mb-1',
-            isGrid ? 'text-sm line-clamp-1' : 'text-base'
+            'font-bold text-gray-900 leading-tight mb-1 flex items-center gap-1.5',
+            isGrid ? 'text-sm' : 'text-base'
           )}>
-            {service.name}
+            <span className={cn(isGrid && "line-clamp-1")}>{service.name}</span>
+            {service.isVerified && (
+              <div className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-blue-500 text-white shadow-sm flex-shrink-0">
+                <ShieldCheck size={8} />
+                <span className="text-[7px] font-black uppercase tracking-tighter">Verified</span>
+              </div>
+            )}
           </h3>
           <div className="flex items-center gap-1 text-[10px] text-gray-400 mb-2">
             <MapPin className="h-3 w-3" />
@@ -127,9 +148,9 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
           serviceImage={service.image}
           phone={service.phone} 
           whatsapp={service.whatsapp} 
-          size={isGrid ? 'sm' : 'md'}
+          size={service.isPremium ? (isGrid ? 'md' : 'lg') : (isGrid ? 'sm' : 'md')}
           showInquiry={true}
-          className="mt-1"
+          className="mt-2"
         />
       </div>
     </Card>

@@ -30,15 +30,32 @@ export interface Inquiry {
   createdAt: string;
 }
 
+export interface OperatingHours {
+  monday: { open: string; close: string; closed?: boolean };
+  tuesday: { open: string; close: string; closed?: boolean };
+  wednesday: { open: string; close: string; closed?: boolean };
+  thursday: { open: string; close: string; closed?: boolean };
+  friday: { open: string; close: string; closed?: boolean };
+  saturday: { open: string; close: string; closed?: boolean };
+  sunday: { open: string; close: string; closed?: boolean };
+}
+
 export interface PetService {
   id: string;
   vendorId: string;
+  vendorName?: string;
   name: string;
-  category: 'Pet Shops' | 'Vet Clinics' | 'Grooming' | 'Trainers' | 'Pet Hotels' | 'Events' | 'Daycare';
+  category: 'Pet Shops' | 'Vet Clinics' | 'Grooming' | 'Trainers' | 'Pet Hotels' | 'Events' | 'Daycare' | 'Boarding' | 'Walking';
   rating: number;
   reviewCount: number;
   location: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
   image: string;
+  gallery?: string[];
+  galleryCaptions?: string[];
   price?: string;
   isPremium: boolean;
   isVerified?: boolean;
@@ -47,6 +64,7 @@ export interface PetService {
   description: string;
   isTopRated?: boolean;
   isMostBooked?: boolean;
+  operatingHours?: OperatingHours;
 }
 
 export interface Category {
@@ -65,8 +83,10 @@ export interface Banner {
 export interface LostFoundPost {
   id: string;
   type: 'lost' | 'found';
+  petCategory: 'Dog' | 'Cat' | 'Bird' | 'Other';
   petType: string;
   petName?: string;
+  breed?: string;
   description: string;
   location: string;
   image: string;
@@ -96,6 +116,7 @@ export interface CommunityPost {
   likes: string[]; // Array of user IDs
   comments: CommunityComment[];
   createdAt: string;
+  serviceId?: string;
 }
 
 export type NotificationType = 'lead' | 'message' | 'lost_found' | 'reminder' | 'system';

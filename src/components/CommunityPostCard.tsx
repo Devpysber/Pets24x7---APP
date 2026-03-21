@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Star, ExternalLink } from 'lucide-react';
 import { CommunityPost } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { Card } from './Card';
 import { Badge } from './Badge';
 import { cn } from '../utils/theme';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 interface CommunityPostCardProps {
   post: CommunityPost;
 }
 
 export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post }) => {
-  const { user, toggleLikeCommunityPost, addCommunityComment } = useAppStore();
+  const { user, toggleLikeCommunityPost, addCommunityComment, services } = useAppStore();
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const navigate = useNavigate();
+  
   const isLiked = user ? post.likes.includes(user.id) : false;
+  const linkedService = post.serviceId ? services.find(s => s.id === post.serviceId) : null;
 
   const handleLike = () => {
     toggleLikeCommunityPost(post.id);
@@ -27,6 +32,34 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post }) =>
     if (!commentText.trim()) return;
     addCommunityComment(post.id, commentText);
     setCommentText('');
+  };
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    
+    if (navigator.share) {
+      setIsSharing(true);
+      try {
+        await navigator.share({
+          title: `Post by ${post.userName}`,
+          text: post.content,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      } finally {
+        setIsSharing(false);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Error copying to clipboard:', err);
+      }
+    }
   };
 
   return (
@@ -67,6 +100,40 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post }) =>
         </p>
       </div>
 
+      {/* Linked Service */}
+      {linkedService && (
+        <div 
+          className="mx-4 mb-3 p-3 rounded-2xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between group/service cursor-pointer active:scale-[0.98] transition-all"
+          onClick={() => navigate(`/service/${linkedService.id}`)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl overflow-hidden shadow-sm bg-white">
+              <img 
+                src={linkedService.image} 
+                alt={linkedService.name} 
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-gray-900 line-clamp-1">{linkedService.name}</h5>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-indigo-600 font-medium">{linkedService.category}</span>
+                <span className="text-[10px] text-gray-300">•</span>
+                <div className="flex items-center gap-0.5">
+                  <Star size={10} className="text-amber-500 fill-amber-500" />
+                  <span className="text-[10px] font-bold text-gray-700">{linkedService.rating}</span>
+                </div>
+              </div>
+              {linkedService.vendorName && (
+                <p className="text-[9px] text-gray-400 mt-0.5">by {linkedService.vendorName}</p>
+              )}
+            </div>
+          </div>
+          <ExternalLink size={14} className="text-indigo-400 group-hover/service:text-indigo-600 transition-colors" />
+        </div>
+      )}
+
       {/* Image */}
       {post.image && (
         <div className="w-full aspect-video overflow-hidden bg-gray-100">
@@ -82,16 +149,22 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post }) =>
       {/* Actions */}
       <div className="p-4 flex items-center justify-between border-t border-black/5">
         <div className="flex items-center gap-6">
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.8 }}
             onClick={handleLike}
             className={cn(
               "flex items-center gap-1.5 transition-colors",
               isLiked ? "text-rose-500" : "text-gray-500"
             )}
           >
-            <Heart size={20} className={cn(isLiked && "fill-current")} />
+            <motion.div
+              animate={isLiked ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart size={20} className={cn(isLiked && "fill-current")} />
+            </motion.div>
             <span className="text-xs font-bold">{post.likes.length}</span>
-          </button>
+          </motion.button>
           <button 
             onClick={() => setShowComments(!showComments)}
             className="flex items-center gap-1.5 text-gray-500"
@@ -99,10 +172,14 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({ post }) =>
             <MessageCircle size={20} />
             <span className="text-xs font-bold">{post.comments.length}</span>
           </button>
+          <button 
+            onClick={handleShare} 
+            className="flex items-center gap-1.5 text-gray-500 hover:text-indigo-600 transition-colors"
+          >
+            <Share2 size={20} />
+            <span className="text-xs font-bold">Share</span>
+          </button>
         </div>
-        <button className="text-gray-500">
-          <Share2 size={20} />
-        </button>
       </div>
 
       {/* Comments Section */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Phone, Share2, MessageCircle, MessageSquare } from 'lucide-react';
 import { LostFoundPost } from '../types';
@@ -11,13 +11,26 @@ interface LostFoundPostCardProps {
 }
 
 export const LostFoundPostCard: React.FC<LostFoundPostCardProps> = ({ post }) => {
-  const handleShare = () => {
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    if (isSharing) return;
+    
     if (navigator.share) {
-      navigator.share({
-        title: `${post.type.toUpperCase()}: ${post.petType}`,
-        text: post.description,
-        url: window.location.href,
-      });
+      setIsSharing(true);
+      try {
+        await navigator.share({
+          title: `${post.type.toUpperCase()}: ${post.petCategory} - ${post.petType}`,
+          text: post.description,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      } finally {
+        setIsSharing(false);
+      }
     }
   };
 
@@ -91,8 +104,12 @@ export const LostFoundPostCard: React.FC<LostFoundPostCardProps> = ({ post }) =>
 
       {/* Post Content */}
       <div className="px-4 pb-4 space-y-2">
-        <div className="flex items-center gap-1 text-gray-900">
-          <span className="font-bold text-sm">{post.petType}</span>
+        <div className="flex items-center gap-2 text-gray-900">
+          <Badge variant="secondary" className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 border-none">
+            {post.petCategory}
+          </Badge>
+          <span className="font-bold text-sm">{post.petName || 'Unnamed'}</span>
+          <span className="text-xs text-gray-500">• {post.breed || post.petType}</span>
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">
           {post.description}

@@ -8,19 +8,26 @@ interface InquiryModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceName: string;
+  initialServiceType?: string;
   onSubmit?: (data: { name: string; phone: string; requirement: string; preferredTime: string; serviceType: string }) => void;
 }
 
-const SERVICE_TYPES = ['General Inquiry', 'Booking', 'Emergency', 'Price Quote', 'Other'];
+const SERVICE_TYPES = ['General Inquiry', 'Booking', 'Emergency', 'Price Quote', 'Call Request', 'Other'];
 const TIME_SLOTS = ['Morning (9 AM - 12 PM)', 'Afternoon (12 PM - 4 PM)', 'Evening (4 PM - 8 PM)', 'Anytime'];
 
-export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, serviceName, onSubmit }) => {
+export const InquiryModal: React.FC<InquiryModalProps> = ({ isOpen, onClose, serviceName, initialServiceType, onSubmit }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [requirement, setRequirement] = useState('');
   const [serviceType, setServiceType] = useState(SERVICE_TYPES[0]);
   const [preferredTime, setPreferredTime] = useState(TIME_SLOTS[3]);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && initialServiceType) {
+      setServiceType(initialServiceType);
+    }
+  }, [isOpen, initialServiceType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

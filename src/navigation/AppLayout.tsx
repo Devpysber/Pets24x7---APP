@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { BottomTabs } from './BottomTabs';
 import { MapPin, Bell, LogIn } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { LoginModal } from '../components/LoginModal';
+import { generateLogo } from '../services/gemini';
 
 export const AppLayout: React.FC = () => {
   const { location: userLocation, user, notifications } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const isDetailView = location.pathname.startsWith('/service/');
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const url = await generateLogo('Pets24x7');
+        if (url) setLogoUrl(url);
+      } catch (error) {
+        console.error('Error generating logo:', error);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -21,11 +35,27 @@ export const AppLayout: React.FC = () => {
         {!isDetailView && (
           <header className="sticky top-0 z-40 border-b border-black/5 bg-white/80 backdrop-blur-xl px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Your Location</span>
-                <div className="flex items-center gap-1 text-indigo-600">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm font-bold">{userLocation}</span>
+              <div className="flex items-center gap-3">
+                {logoUrl ? (
+                  <div className="h-10 w-10 rounded-xl overflow-hidden bg-indigo-50 border border-indigo-100 shadow-sm">
+                    <img 
+                      src={logoUrl} 
+                      alt="Pets24x7 Logo" 
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-10 w-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xs">
+                    P24
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Your Location</span>
+                  <div className="flex items-center gap-1 text-indigo-600">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm font-bold">{userLocation}</span>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">

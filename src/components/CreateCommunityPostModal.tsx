@@ -11,10 +11,11 @@ interface CreateCommunityPostModalProps {
 }
 
 export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> = ({ isOpen, onClose }) => {
-  const { addCommunityPost, user } = useAppStore();
+  const { addCommunityPost, user, services } = useAppStore();
   const [content, setContent] = useState('');
   const [category, setCategory] = useState<'Tips' | 'Adoption' | 'Stories'>('Tips');
   const [image, setImage] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -28,10 +29,12 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
         content,
         category,
         image: image || undefined,
+        serviceId: selectedServiceId || undefined,
       });
       setIsLoading(false);
       setContent('');
       setImage('');
+      setSelectedServiceId('');
       onClose();
     }, 1000);
   };
@@ -130,6 +133,20 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                       className="w-full pl-12 pr-4 py-3 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 ml-1">Link a Service (Optional)</label>
+                  <select 
+                    value={selectedServiceId}
+                    onChange={(e) => setSelectedServiceId(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                  >
+                    <option value="">No service linked</option>
+                    {services.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.category})</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-black/5">

@@ -13,7 +13,9 @@ interface CreateLostFoundPostModalProps {
 export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> = ({ isOpen, onClose }) => {
   const { addLostFoundPost } = useAppStore();
   const [type, setType] = useState<'lost' | 'found'>('lost');
-  const [petType, setPetType] = useState('');
+  const [petCategory, setPetCategory] = useState<'Dog' | 'Cat' | 'Bird' | 'Other'>('Dog');
+  const [petName, setPetName] = useState('');
+  const [breed, setBreed] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [contactInfo, setContactInfo] = useState('');
@@ -23,7 +25,10 @@ export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> =
     e.preventDefault();
     addLostFoundPost({
       type,
-      petType,
+      petCategory,
+      petName,
+      breed,
+      petType: breed, // Keep for compatibility
       description,
       location,
       contactInfo,
@@ -32,7 +37,9 @@ export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> =
     onClose();
     // Reset form
     setType('lost');
-    setPetType('');
+    setPetCategory('Dog');
+    setPetName('');
+    setBreed('');
     setDescription('');
     setLocation('');
     setContactInfo('');
@@ -96,16 +103,47 @@ export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> =
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
-                    Pet Type
+                    Pet Name (if known)
                   </label>
                   <input
-                    required
                     type="text"
-                    placeholder="e.g. Golden Retriever, Persian Cat"
-                    value={petType}
-                    onChange={(e) => setPetType(e.target.value)}
+                    placeholder="e.g. Buddy"
+                    value={petName}
+                    onChange={(e) => setPetName(e.target.value)}
                     className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+                      Pet Type
+                    </label>
+                    <select
+                      required
+                      value={petCategory}
+                      onChange={(e) => setPetCategory(e.target.value as any)}
+                      className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="Dog">Dog</option>
+                      <option value="Cat">Cat</option>
+                      <option value="Bird">Bird</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+                      Breed
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="e.g. Golden Retriever"
+                      value={breed}
+                      onChange={(e) => setBreed(e.target.value)}
+                      className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">

@@ -9,6 +9,7 @@ import {
   ChevronRight, 
   MessageSquare, 
   Star,
+  Filter,
   Edit,
   Trash2,
   CheckCircle,
@@ -33,6 +34,11 @@ import { LeadPurchaseModal } from '../components/LeadPurchaseModal';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { NoLeadsState } from '../components/EmptyState';
+import { StatCard } from '../components/StatCard';
+import { LeadCard } from '../components/LeadCard';
+import { Badge } from '../components/Badge';
+import { DataTable } from '../components/DataTable';
+import { FlatList } from '../components/FlatList';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -58,16 +64,17 @@ export default function VendorDashboardScreen() {
     isVerified: false,
     isPremium: false
   });
-  const [leadFilter, setLeadFilter] = useState<InquiryStatus | 'all'>('all');
+  const [leadFilters, setLeadFilters] = useState<InquiryStatus[]>([]);
+  const [isLeadFilterOpen, setIsLeadFilterOpen] = useState(false);
   const navigate = useNavigate();
 
   // Filter services owned by this vendor
   const myServices = services.filter(s => s.vendorId === user?.id); 
   const myLeads = inquiries.filter(i => myServices.some(s => s.id === i.serviceId));
 
-  const filteredLeads = leadFilter === 'all' 
+  const filteredLeads = leadFilters.length === 0 
     ? myLeads 
-    : myLeads.filter(l => l.status === leadFilter);
+    : myLeads.filter(l => leadFilters.includes(l.status));
 
   const stats = [
     { label: 'Total Listings', value: myServices.length, icon: LayoutDashboard, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -168,23 +175,15 @@ export default function VendorDashboardScreen() {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-4">
               {stats.map((stat, idx) => (
-                <div 
-                  key={idx} 
+                <StatCard 
+                  key={idx}
+                  label={stat.label}
+                  value={stat.value}
+                  icon={stat.icon}
+                  color={stat.bg + " " + stat.color}
                   onClick={stat.action}
-                  className={cn(
-                    "bg-white p-4 rounded-2xl border border-slate-100 shadow-sm transition-all",
-                    stat.action && "cursor-pointer active:scale-95 hover:border-amber-200"
-                  )}
-                >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", stat.bg)}>
-                    <stat.icon className={cn("w-5 h-5", stat.color)} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
-                    {stat.action && <Plus className="w-4 h-4 text-amber-500" />}
-                  </div>
-                  <div className="text-xs text-slate-500">{stat.label}</div>
-                </div>
+                  className={cn(stat.action && "hover:border-amber-200")}
+                />
               ))}
             </div>
 
@@ -207,14 +206,9 @@ export default function VendorDashboardScreen() {
                           <div className="text-[10px] text-slate-500">{lead.serviceType || lead.type}</div>
                         </div>
                       </div>
-                      <div className={cn(
-                        "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase",
-                        lead.status === 'new' ? "bg-blue-50 text-blue-600" :
-                        lead.status === 'contacted' ? "bg-amber-50 text-amber-600" :
-                        "bg-gray-50 text-gray-600"
-                      )}>
+                      <Badge variant={lead.status === 'new' ? 'primary' : lead.status === 'contacted' ? 'accent' : 'secondary'} className="text-[8px]">
                         {lead.status}
-                      </div>
+                      </Badge>
                     </div>
                   ))
                 ) : (
@@ -269,64 +263,84 @@ export default function VendorDashboardScreen() {
                 className="flex items-center space-x-1 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium active:scale-95 transition-transform"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add New</span>
+                <span>Add Pet</span>
               </button>
             </div>
 
             <div className="space-y-4">
-              {myServices.map((service) => (
-                <div key={service.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex space-x-4">
-                  <div className="relative group">
-                    <img src={service.image} alt={service.name} className="w-24 h-24 rounded-xl object-cover" />
-                    <button className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl text-white">
-                      <Camera className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-slate-900 truncate">{service.name}</h3>
-                        <p className="text-xs text-slate-500">{service.category}</p>
+              <DataTable 
+                data={myServices}
+                columns={[
+                  {
+                    header: 'Service',
+                    accessor: (service) => (
+                      <div className="flex items-center gap-3">
+                        <img src={service.image} alt={service.name} className="w-10 h-10 rounded-lg object-cover" />
+                        <div>
+                          <div className="font-bold text-slate-900">{service.name}</div>
+                          <div className="text-[10px] text-slate-400 uppercase tracking-wider">{service.category}</div>
+                        </div>
                       </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => setEditingService(service)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => deleteService(service.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center space-x-3">
-                      <div className="flex items-center text-amber-500 text-xs font-bold">
-                        <Star className="w-3 h-3 fill-current mr-0.5" />
+                    )
+                  },
+                  {
+                    header: 'Status',
+                    accessor: (service) => (
+                      <Badge variant={service.isPremium ? 'accent' : 'primary'} className="text-[8px]">
+                        {service.isPremium ? 'Premium' : 'Free'}
+                      </Badge>
+                    )
+                  },
+                  {
+                    header: 'Rating',
+                    accessor: (service) => (
+                      <div className="flex items-center gap-1 text-amber-500 font-bold">
+                        <Star size={12} className="fill-current" />
                         {service.rating}
                       </div>
-                      <div className="text-xs text-slate-400">{service.reviewCount} reviews</div>
-                      {service.isPremium && (
-                        <div className="flex items-center text-indigo-600 text-[10px] font-bold uppercase">
-                          <Crown className="w-3 h-3 mr-0.5" />
-                          Premium
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <button className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                        Manage Photos
-                      </button>
-                      <button className="text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-50 px-2 py-1 rounded-lg">
-                        View Public
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                    )
+                  },
+                  {
+                    header: 'Price',
+                    accessor: (service) => (
+                      <div className="font-bold text-slate-900">
+                        {service.price || 'N/A'}
+                      </div>
+                    )
+                  },
+                  {
+                    header: 'Actions',
+                    accessor: (service) => (
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            window.location.href = `tel:${service.phone}`; 
+                          }}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          title="Call Vendor"
+                        >
+                          <Phone size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingService(service); }}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteService(service.id); }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ),
+                    className: "text-right"
+                  }
+                ]}
+                onRowClick={(service) => navigate(`/service/${service.id}`)}
+              />
             </div>
           </motion.div>
         )}
@@ -339,95 +353,67 @@ export default function VendorDashboardScreen() {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">Customer Leads</h2>
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                {(['all', 'new', 'contacted', 'closed'] as const).map(status => (
-                  <button
-                    key={status}
-                    onClick={() => setLeadFilter(status)}
-                    className={cn(
-                      "px-2 py-1 text-[10px] font-bold uppercase rounded-md transition-all",
-                      leadFilter === status ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+              <div className="relative">
+                <button 
+                  onClick={() => setIsLeadFilterOpen(!isLeadFilterOpen)}
+                  className="flex items-center space-x-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
+                >
+                  <Filter className="w-3 h-3" />
+                  <span>Filter ({leadFilters.length || 'All'})</span>
+                  <ChevronRight className={cn("w-3 h-3 transition-transform", isLeadFilterOpen ? "rotate-90" : "")} />
+                </button>
+
+                {isLeadFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-100 rounded-xl shadow-xl z-50 py-1 overflow-hidden">
+                    {(['new', 'contacted', 'closed'] as InquiryStatus[]).map(status => (
+                      <label 
+                        key={status}
+                        className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
+                      >
+                        <input 
+                          type="checkbox"
+                          checked={leadFilters.includes(status)}
+                          onChange={() => {
+                            setLeadFilters(prev => 
+                              prev.includes(status) 
+                                ? prev.filter(s => s !== status) 
+                                : [...prev, status]
+                            );
+                          }}
+                          className="w-3 h-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 mr-2"
+                        />
+                        <span className="text-[10px] font-bold uppercase text-slate-600">{status}</span>
+                      </label>
+                    ))}
+                    {leadFilters.length > 0 && (
+                      <button 
+                        onClick={() => setLeadFilters([])}
+                        className="w-full text-center py-2 text-[9px] font-black text-rose-500 border-t border-slate-50 hover:bg-rose-50 transition-colors uppercase tracking-widest"
+                      >
+                        Clear All
+                      </button>
                     )}
-                  >
-                    {status}
-                  </button>
-                ))}
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="space-y-4">
-              {filteredLeads.length > 0 ? (
-                filteredLeads.map((lead) => (
-                  <div key={lead.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold">
-                          {lead.userName[0]}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-900">{lead.userName}</div>
-                          <div className="text-[10px] text-slate-400">{new Date(lead.createdAt).toLocaleDateString()} at {new Date(lead.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        </div>
-                      </div>
-                      <select 
-                        value={lead.status}
-                        onChange={(e) => handleStatusChange(lead.id, e.target.value as InquiryStatus)}
-                        className={cn(
-                          "text-[10px] font-bold uppercase px-2 py-1 rounded-lg border-none focus:ring-2 focus:ring-indigo-500 outline-none",
-                          lead.status === 'new' ? "bg-blue-50 text-blue-600" :
-                          lead.status === 'contacted' ? "bg-amber-50 text-amber-600" :
-                          "bg-gray-50 text-gray-600"
-                        )}
-                      >
-                        <option value="new">New</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="closed">Closed</option>
-                      </select>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl">
-                        <Zap className="h-3 w-3 text-indigo-500" />
-                        <span className="font-bold uppercase">{lead.serviceType || 'General'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-xl">
-                        <Clock className="h-3 w-3 text-indigo-500" />
-                        <span className="font-bold uppercase">{lead.preferredTime || 'Anytime'}</span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-slate-600 bg-indigo-50/30 p-3 rounded-xl italic mb-3">
-                      "{lead.message}"
-                    </p>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                      <div className="flex items-center gap-2">
-                        <a 
-                          href={`tel:${lead.userPhone}`} 
-                          className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold active:scale-95 transition-all"
-                        >
-                          <Phone className="w-3.5 h-3.5" />
-                          Call
-                        </a>
-                        <a 
-                          href={`https://wa.me/${lead.userPhone}`} 
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold active:scale-95 transition-all"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                          WhatsApp
-                        </a>
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-medium bg-slate-50 px-2 py-1 rounded-lg">
-                        Via {lead.type}
-                      </div>
-                    </div>
+              <FlatList
+                data={filteredLeads}
+                renderItem={(lead) => (
+                  <div className="mb-4">
+                    <LeadCard 
+                      lead={lead} 
+                      onAction={(type) => {
+                        if (type === 'call') window.location.href = `tel:${lead.userPhone}`;
+                        if (type === 'whatsapp') window.open(`https://wa.me/${lead.userPhone.replace(/\D/g, '')}`, '_blank');
+                      }}
+                    />
                   </div>
-                ))
-              ) : (
-                <NoLeadsState onAction={() => navigate('/vendor/dashboard')} />
-              )}
+                )}
+                ListEmptyComponent={<NoLeadsState onAction={() => navigate('/vendor/dashboard')} />}
+              />
             </div>
           </motion.div>
         )}

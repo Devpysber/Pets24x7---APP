@@ -140,15 +140,18 @@ export const HomeScreen: React.FC = () => {
         <>
           {/* Featured Listings Carousel */}
           {premiumServices.length > 0 && (
-            <section className="px-4">
+            <section className="px-4 relative overflow-hidden py-4">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 via-white to-indigo-50/30 -z-10" />
+              <div className="absolute -right-20 top-0 w-64 h-64 bg-amber-200/20 rounded-full blur-[80px] -z-10" />
+              
               <SectionHeader 
                 title="Featured Premium Services" 
                 subtitle="Top rated partners in your area"
                 onSeeAll={handleSeeAllFeatured}
               />
-              <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 no-scrollbar snap-x">
+              <div className="flex gap-5 overflow-x-auto pb-6 -mx-4 px-4 no-scrollbar snap-x">
                 {premiumServices.map((service) => (
-                  <div key={service.id} className="min-w-[260px] snap-center">
+                  <div key={service.id} className="min-w-[280px] snap-center">
                     <ListingCard service={service} viewType="grid" />
                   </div>
                 ))}

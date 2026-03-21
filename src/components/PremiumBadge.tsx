@@ -13,13 +13,13 @@ export const PremiumBadge: React.FC<PremiumBadgeProps> = ({ className, size = 's
     <Badge 
       variant="featured" 
       className={cn(
-        "shadow-md bg-gradient-to-r from-amber-500 to-amber-600 border-none text-white font-black uppercase tracking-widest flex items-center gap-1",
-        size === 'sm' ? "text-[8px] px-2 py-0.5" : "text-[10px] px-3 py-1",
+        "shadow-lg bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 border-none text-white font-black uppercase tracking-[0.15em] flex items-center gap-1.5 animate-pulse-slow",
+        size === 'sm' ? "text-[7px] px-2 py-1 rounded-lg" : "text-[9px] px-3 py-1.5 rounded-xl",
         className
       )}
     >
-      <Crown className={cn(size === 'sm' ? "w-2 h-2" : "w-3 h-3", "fill-current")} />
-      Featured
+      <Crown className={cn(size === 'sm' ? "w-2.5 h-2.5" : "w-3.5 h-3.5", "fill-white")} />
+      Premium
     </Badge>
   );
 };

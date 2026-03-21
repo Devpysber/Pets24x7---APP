@@ -24,7 +24,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PetService, LostFoundPost } from '../types';
+import { PetService, LostFoundPost, CommunityPost } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -33,8 +33,20 @@ function cn(...inputs: ClassValue[]) {
 }
 
 export default function AdminDashboardScreen() {
-  const { services, lostFoundPosts, deleteService, approveService, deleteLostFoundPost } = useAppStore();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'lostfound' | 'users'>('analytics');
+  const { 
+    services, 
+    lostFoundPosts, 
+    communityPosts,
+    deleteService, 
+    approveService, 
+    deleteLostFoundPost,
+    updateLostFoundPost,
+    updateCommunityPost,
+    deleteCommunityPost
+  } = useAppStore();
+  const [activeTab, setActiveTab] = useState<'analytics' | 'listings' | 'lostfound' | 'community' | 'users'>('analytics');
+  const [editingLostFound, setEditingLostFound] = useState<LostFoundPost | null>(null);
+  const [editingCommunity, setEditingCommunity] = useState<CommunityPost | null>(null);
 
   const pendingServices = services.filter(s => !s.isVerified);
   const activeServices = services.filter(s => s.isVerified);
@@ -61,13 +73,13 @@ export default function AdminDashboardScreen() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
-          {(['analytics', 'listings', 'lostfound', 'users'] as const).map((tab) => (
+        <div className="flex space-x-1 bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
+          {(['analytics', 'listings', 'lostfound', 'community', 'users'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex-1 py-2 text-xs font-bold rounded-lg capitalize transition-all",
+                "flex-1 py-2 px-3 text-[10px] font-bold rounded-lg capitalize transition-all whitespace-nowrap",
                 activeTab === tab 
                   ? "bg-white text-slate-900 shadow-md" 
                   : "text-slate-400 hover:text-white"
@@ -270,7 +282,11 @@ export default function AdminDashboardScreen() {
                   <div className="flex space-x-3">
                     <img src={post.image} alt={post.petName} className="w-16 h-16 rounded-xl object-cover" />
                     <div>
-                      <h3 className="font-bold text-slate-900">{post.petName}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-slate-900">{post.petName || 'Unnamed Pet'}</h3>
+                        <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-bold uppercase">{post.petCategory}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded font-bold uppercase">{post.breed || post.petType}</span>
+                      </div>
                       <p className="text-xs text-slate-500 line-clamp-2">{post.description}</p>
                     </div>
                   </div>
@@ -279,7 +295,58 @@ export default function AdminDashboardScreen() {
                       <Eye className="w-3 h-3 mr-1" />
                       View
                     </button>
-                    <button className="flex-1 bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg flex items-center justify-center">
+                    <button 
+                      onClick={() => setEditingLostFound(post)}
+                      className="flex-1 bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg flex items-center justify-center"
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'community' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <h2 className="text-lg font-bold text-slate-900">Community Moderation</h2>
+            <div className="space-y-4">
+              {communityPosts.map((post) => (
+                <div key={post.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase">
+                        {post.category}
+                      </div>
+                      <span className="text-xs text-slate-400">{new Date(post.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <button 
+                      onClick={() => deleteCommunityPost(post.id)}
+                      className="text-red-500 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex space-x-3">
+                    {post.image && (
+                      <img src={post.image} alt="Post" className="w-16 h-16 rounded-xl object-cover" />
+                    )}
+                    <div className="flex-1">
+                      <h3 className="font-bold text-sm text-slate-900">{post.userName}</h3>
+                      <p className="text-xs text-slate-500 line-clamp-2">{post.content}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex space-x-2">
+                    <button 
+                      onClick={() => setEditingCommunity(post)}
+                      className="flex-1 bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-lg flex items-center justify-center"
+                    >
                       <Edit className="w-3 h-3 mr-1" />
                       Edit
                     </button>
@@ -339,6 +406,131 @@ export default function AdminDashboardScreen() {
           </motion.div>
         )}
       </div>
+
+      {/* Edit Lost & Found Modal */}
+      {editingLostFound && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl"
+          >
+            <h2 className="text-xl font-bold mb-4">Edit Lost & Found</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Pet Category</label>
+                  <select 
+                    value={editingLostFound.petCategory}
+                    onChange={(e) => setEditingLostFound({ ...editingLostFound, petCategory: e.target.value as any })}
+                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="Dog">Dog</option>
+                    <option value="Cat">Cat</option>
+                    <option value="Bird">Bird</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Pet Name</label>
+                  <input 
+                    type="text" 
+                    value={editingLostFound.petName || ''}
+                    onChange={(e) => setEditingLostFound({ ...editingLostFound, petName: e.target.value })}
+                    className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Breed</label>
+                <input 
+                  type="text" 
+                  value={editingLostFound.breed || editingLostFound.petType}
+                  onChange={(e) => setEditingLostFound({ ...editingLostFound, breed: e.target.value, petType: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Description</label>
+                <textarea 
+                  value={editingLostFound.description}
+                  onChange={(e) => setEditingLostFound({ ...editingLostFound, description: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm h-24 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+              <div className="flex space-x-3 pt-2">
+                <button 
+                  onClick={() => setEditingLostFound(null)}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    updateLostFoundPost(editingLostFound.id, editingLostFound);
+                    setEditingLostFound(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Community Post Modal */}
+      {editingCommunity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl"
+          >
+            <h2 className="text-xl font-bold mb-4">Edit Community Post</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Content</label>
+                <textarea 
+                  value={editingCommunity.content}
+                  onChange={(e) => setEditingCommunity({ ...editingCommunity, content: e.target.value })}
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm h-32 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase">Category</label>
+                <select 
+                  value={editingCommunity.category}
+                  onChange={(e) => setEditingCommunity({ ...editingCommunity, category: e.target.value as any })}
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
+                  <option value="Tips">Tips</option>
+                  <option value="Adoption">Adoption</option>
+                  <option value="Stories">Stories</option>
+                </select>
+              </div>
+              <div className="flex space-x-3 pt-2">
+                <button 
+                  onClick={() => setEditingCommunity(null)}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    updateCommunityPost(editingCommunity.id, editingCommunity);
+                    setEditingCommunity(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

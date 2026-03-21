@@ -20,7 +20,7 @@ interface AppState {
     status: 'active' | 'expired' | 'none';
   };
   isInquiryModalOpen: boolean;
-  selectedServiceForInquiry: { id: string; name: string } | null;
+  selectedServiceForInquiry: { id: string; name: string; initialType?: string } | null;
   setUser: (user: User | null) => void;
   setUserRole: (role: 'user' | 'vendor' | 'admin') => void;
   buyLeads: (amount: number) => void;
@@ -35,10 +35,13 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   setLocation: (location: string) => void;
   addLostFoundPost: (post: Omit<LostFoundPost, 'id' | 'createdAt' | 'userName' | 'userImage'>) => void;
+  updateLostFoundPost: (id: string, post: Partial<LostFoundPost>) => void;
   toggleFavorite: (serviceId: string) => void;
   addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'userId' | 'status'>) => void;
   updateInquiryStatus: (id: string, status: Inquiry['status']) => void;
   addCommunityPost: (post: Omit<CommunityPost, 'id' | 'createdAt' | 'userName' | 'userImage' | 'userId' | 'likes' | 'comments'>) => void;
+  updateCommunityPost: (id: string, post: Partial<CommunityPost>) => void;
+  deleteCommunityPost: (id: string) => void;
   toggleLikeCommunityPost: (postId: string) => void;
   addCommunityComment: (postId: string, text: string) => void;
   setLostFoundPosts: (posts: LostFoundPost[]) => void;
@@ -46,7 +49,7 @@ interface AppState {
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotifications: () => void;
-  openInquiryModal: (service: { id: string; name: string }) => void;
+  openInquiryModal: (service: { id: string; name: string; initialType?: string }) => void;
   closeInquiryModal: () => void;
 }
 
@@ -116,6 +119,7 @@ export const useAppStore = create<AppState>((set) => ({
     {
       id: 's1',
       vendorId: 'u1',
+      vendorName: 'Antriksh Shah',
       name: 'Happy Paws Grooming',
       category: 'Grooming',
       rating: 4.8,
@@ -128,11 +132,23 @@ export const useAppStore = create<AppState>((set) => ({
       whatsapp: '9876543210',
       isVerified: true,
       isPremium: true,
-      isTopRated: true
+      isTopRated: true,
+      coordinates: { lat: 19.1136, lng: 72.8697 },
+      gallery: [
+        'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&q=80&w=800'
+      ],
+      galleryCaptions: [
+        'Professional grooming session',
+        'Happy customer after a bath',
+        'Our premium grooming tools'
+      ]
     },
     {
       id: 's2',
       vendorId: 'u1',
+      vendorName: 'Antriksh Shah',
       name: 'Doggy Daycare Center',
       category: 'Daycare',
       rating: 4.5,
@@ -145,7 +161,16 @@ export const useAppStore = create<AppState>((set) => ({
       whatsapp: '9876543211',
       isVerified: true,
       isPremium: false,
-      isMostBooked: true
+      isMostBooked: true,
+      coordinates: { lat: 19.0522, lng: 72.8489 },
+      gallery: [
+        'https://images.unsplash.com/photo-1541599540903-216a46ca1df0?auto=format&fit=crop&q=80&w=800',
+        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800'
+      ],
+      galleryCaptions: [
+        'Our spacious play area',
+        'Furry friends having fun'
+      ]
     }
   ],
   lostFoundPosts: [],
@@ -169,7 +194,8 @@ export const useAppStore = create<AppState>((set) => ({
           createdAt: new Date().toISOString()
         }
       ],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      serviceId: 's1'
     },
     {
       id: 'cp2',
@@ -181,7 +207,8 @@ export const useAppStore = create<AppState>((set) => ({
       image: 'https://picsum.photos/seed/petstory1/600/400',
       likes: [],
       comments: [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      serviceId: 's2'
     }
   ],
   isLoading: false,
@@ -231,6 +258,9 @@ export const useAppStore = create<AppState>((set) => ({
       ...state.lostFoundPosts
     ]
   })),
+  updateLostFoundPost: (id, updatedPost) => set((state) => ({
+    lostFoundPosts: state.lostFoundPosts.map(p => p.id === id ? { ...p, ...updatedPost } : p)
+  })),
   toggleFavorite: (serviceId) => set((state) => ({
     favorites: state.favorites.includes(serviceId)
       ? state.favorites.filter(id => id !== serviceId)
@@ -261,10 +291,17 @@ export const useAppStore = create<AppState>((set) => ({
         userImage: state.user?.avatar || 'https://picsum.photos/seed/guest/100/100',
         likes: [],
         comments: [],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        serviceId: post.serviceId
       },
       ...state.communityPosts
     ]
+  })),
+  updateCommunityPost: (id, updatedPost) => set((state) => ({
+    communityPosts: state.communityPosts.map(p => p.id === id ? { ...p, ...updatedPost } : p)
+  })),
+  deleteCommunityPost: (id) => set((state) => ({
+    communityPosts: state.communityPosts.filter(p => p.id !== id)
   })),
   toggleLikeCommunityPost: (postId) => set((state) => ({
     communityPosts: state.communityPosts.map(post => {

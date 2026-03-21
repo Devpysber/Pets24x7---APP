@@ -52,6 +52,7 @@ export default function App() {
         isOpen={isInquiryModalOpen}
         onClose={closeInquiryModal}
         serviceName={selectedServiceForInquiry?.name || ''}
+        initialServiceType={selectedServiceForInquiry?.initialType}
         onSubmit={handleInquirySubmit}
       />
     </BrowserRouter>

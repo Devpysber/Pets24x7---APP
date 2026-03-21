@@ -27,11 +27,17 @@ export const CommunityScreen: React.FC = () => {
   const filteredPosts = communityPosts.filter(post => {
     const matchesCategory = activeCategory === 'All' || post.category === activeCategory;
     const matchesSearch = post.content.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          post.userName.toLowerCase().includes(searchQuery.toLowerCase());
+                          post.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          post.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const categories: CommunityCategory[] = ['All', 'Tips', 'Adoption', 'Stories'];
+
+  const getCategoryCount = (cat: CommunityCategory) => {
+    if (cat === 'All') return communityPosts.length;
+    return communityPosts.filter(p => p.category === cat).length;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 pb-24">
@@ -55,8 +61,16 @@ export const CommunityScreen: React.FC = () => {
               placeholder="Search posts, tips, stories..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+              className="w-full pl-12 pr-12 py-3 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <Plus size={16} className="rotate-45" />
+              </button>
+            )}
           </div>
           <button className="h-12 w-12 rounded-2xl bg-gray-50 border border-black/5 flex items-center justify-center text-gray-500">
             <Filter size={20} />
@@ -72,13 +86,19 @@ export const CommunityScreen: React.FC = () => {
               key={cat}
               onClick={() => setActiveCategory(cat)}
               className={cn(
-                "px-6 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border",
+                "px-6 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border flex items-center gap-2",
                 activeCategory === cat 
                   ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100" 
                   : "bg-gray-50 text-gray-500 border-black/5"
               )}
             >
               {cat}
+              <span className={cn(
+                "px-1.5 py-0.5 rounded-md text-[10px]",
+                activeCategory === cat ? "bg-white/20 text-white" : "bg-gray-200 text-gray-500"
+              )}>
+                {getCategoryCount(cat)}
+              </span>
             </button>
           ))}
         </div>
@@ -91,11 +111,21 @@ export const CommunityScreen: React.FC = () => {
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Trending Today</h2>
         </div>
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-          {['Puppy Training', 'Summer Care', 'Rescue Stories'].map((tag, i) => (
-            <div key={i} className="flex-shrink-0 px-4 py-3 rounded-2xl bg-white border border-black/5 shadow-sm flex items-center gap-2">
-              <span className="text-xs font-bold text-indigo-600">#</span>
-              <span className="text-xs font-bold text-gray-700">{tag}</span>
-            </div>
+          {['Puppy Training', 'Summer Care', 'Rescue Stories', 'Pet Health'].map((tag, i) => (
+            <motion.button 
+              key={i} 
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSearchQuery(tag)}
+              className={cn(
+                "flex-shrink-0 px-4 py-3 rounded-2xl border transition-all flex items-center gap-2",
+                searchQuery === tag 
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-md" 
+                  : "bg-white border-black/5 text-gray-700 shadow-sm hover:bg-gray-50"
+              )}
+            >
+              <span className={cn("text-xs font-bold", searchQuery === tag ? "text-white/80" : "text-indigo-600")}>#</span>
+              <span className="text-xs font-bold">{tag}</span>
+            </motion.button>
           ))}
         </div>
       </section>

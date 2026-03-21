@@ -16,20 +16,26 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className }) => {
   );
 };
 
-export const ListingSkeleton: React.FC<{ viewType?: 'grid' | 'list' }> = ({ viewType = 'grid' }) => {
+export const ListingSkeleton: React.FC<{ viewType?: 'grid' | 'list', isPremium?: boolean }> = ({ viewType = 'grid', isPremium = false }) => {
   if (viewType === 'list') {
     return (
-      <div className="flex gap-4 p-3 bg-white rounded-3xl border border-black/5">
-        <Skeleton className="h-28 w-28 rounded-xl shrink-0" />
+      <div className={cn(
+        "flex gap-4 p-3 rounded-3xl border transition-all",
+        isPremium ? "bg-amber-50/30 border-amber-200 shadow-sm" : "bg-white border-black/5"
+      )}>
+        <Skeleton className={cn(
+          "shrink-0",
+          isPremium ? "h-32 w-32 rounded-2xl bg-amber-100" : "h-28 w-28 rounded-xl bg-slate-200"
+        )} />
         <div className="flex-1 flex flex-col justify-between py-1">
           <div>
-            <Skeleton className="h-3 w-16 mb-2" />
-            <Skeleton className="h-5 w-3/4 mb-2" />
-            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className={cn("h-3 w-16 mb-2", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+            <Skeleton className={cn("h-5 w-3/4 mb-2", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+            <Skeleton className={cn("h-3 w-1/2", isPremium ? "bg-amber-200" : "bg-slate-200")} />
           </div>
           <div className="flex gap-2">
-            <Skeleton className="h-8 flex-1 rounded-lg" />
-            <Skeleton className="h-8 flex-1 rounded-lg" />
+            <Skeleton className={cn("h-8 flex-1 rounded-lg", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+            <Skeleton className={cn("h-8 flex-1 rounded-lg", isPremium ? "bg-amber-200" : "bg-slate-200")} />
           </div>
         </div>
       </div>
@@ -37,15 +43,21 @@ export const ListingSkeleton: React.FC<{ viewType?: 'grid' | 'list' }> = ({ view
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-3xl border border-black/5 overflow-hidden">
-      <Skeleton className="h-40 w-full" />
+    <div className={cn(
+      "flex flex-col rounded-3xl border overflow-hidden transition-all",
+      isPremium ? "bg-amber-50/30 border-amber-200 shadow-sm" : "bg-white border-black/5"
+    )}>
+      <Skeleton className={cn(
+        "w-full",
+        isPremium ? "h-48 bg-amber-100" : "h-40 bg-slate-200"
+      )} />
       <div className="p-3">
-        <Skeleton className="h-3 w-16 mb-2" />
-        <Skeleton className="h-5 w-3/4 mb-2" />
-        <Skeleton className="h-3 w-1/2 mb-4" />
+        <Skeleton className={cn("h-3 w-16 mb-2", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+        <Skeleton className={cn("h-5 w-3/4 mb-2", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+        <Skeleton className={cn("h-3 w-1/2 mb-4", isPremium ? "bg-amber-200" : "bg-slate-200")} />
         <div className="flex gap-2">
-          <Skeleton className="h-8 flex-1 rounded-lg" />
-          <Skeleton className="h-8 flex-1 rounded-lg" />
+          <Skeleton className={cn("h-8 flex-1 rounded-lg", isPremium ? "bg-amber-200" : "bg-slate-200")} />
+          <Skeleton className={cn("h-8 flex-1 rounded-lg", isPremium ? "bg-amber-200" : "bg-slate-200")} />
         </div>
       </div>
     </div>

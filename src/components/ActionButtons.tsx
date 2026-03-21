@@ -75,19 +75,29 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
         variant="primary" 
         size="sm" 
         onClick={handleCall}
-        className={cn(buttonSizeClass, "bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-transform active:scale-90")}
+        className={cn(
+          buttonSizeClass, 
+          "bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100 transition-all active:scale-90 flex items-center justify-center gap-2",
+          size === 'lg' && "flex-1"
+        )}
         title="Call Now"
       >
-        <Phone size={iconSize} />
+        <Phone size={iconSize} className="fill-current" />
+        {size === 'lg' && <span className="text-xs font-bold uppercase tracking-wider">Call Now</span>}
       </Button>
       <Button 
         variant="secondary" 
         size="sm" 
         onClick={handleWhatsapp}
-        className={cn(buttonSizeClass, "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-transform active:scale-90")}
+        className={cn(
+          buttonSizeClass, 
+          "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-100 transition-all active:scale-90 flex items-center justify-center gap-2",
+          size === 'lg' && "flex-1"
+        )}
         title="WhatsApp"
       >
-        <MessageCircle size={iconSize} />
+        <MessageCircle size={iconSize} className="fill-current" />
+        {size === 'lg' && <span className="text-xs font-bold uppercase tracking-wider">WhatsApp</span>}
       </Button>
       {showInquiry && (
         <Button 
@@ -96,11 +106,11 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
           onClick={handleInquiryClick}
           className={cn(
             size === 'sm' ? "h-8 px-3" : size === 'md' ? "h-10 px-4" : "h-12 px-6",
-            "flex-1 font-bold text-indigo-600 border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 transition-all active:scale-95"
+            "flex-1 font-bold text-indigo-600 border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 transition-all active:scale-95 flex items-center justify-center gap-2"
           )}
         >
-          <Send size={iconSize - 4} className="mr-2" />
-          Inquiry
+          <Send size={iconSize - 4} className="mr-1" />
+          <span className={cn(size === 'sm' ? "text-[8px]" : "text-[10px]", "uppercase tracking-wider")}>Inquiry</span>
         </Button>
       )}
     </div>
