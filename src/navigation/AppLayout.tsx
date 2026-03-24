@@ -19,11 +19,22 @@ export const AppLayout: React.FC = () => {
 
   useEffect(() => {
     const fetchLogo = async () => {
+      // Check cache first
+      const cachedLogo = localStorage.getItem('app_logo_url');
+      if (cachedLogo) {
+        setLogoUrl(cachedLogo);
+        return;
+      }
+
       try {
         const url = await generateLogo('Pets24x7');
-        if (url) setLogoUrl(url);
+        if (url) {
+          setLogoUrl(url);
+          localStorage.setItem('app_logo_url', url);
+        }
       } catch (error) {
         console.error('Error generating logo:', error);
+        // Fallback is already handled by the UI (logoUrl being null)
       }
     };
     fetchLogo();

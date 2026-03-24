@@ -194,18 +194,21 @@ export const ServiceDetailsScreen: React.FC = () => {
             <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="flex gap-2">
-            {service.whatsapp && (
-              <button 
-                onClick={handleWhatsAppShare}
-                className="h-10 w-10 rounded-full bg-emerald-500 backdrop-blur-md flex items-center justify-center text-white border border-emerald-400 shadow-lg shadow-emerald-500/20 transition-transform active:scale-90"
-                title="Share on WhatsApp"
-              >
-                <MessageCircle className="h-5 w-5" />
-              </button>
-            )}
+            <button 
+              onClick={handleWhatsAppShare}
+              className={cn(
+                "h-10 w-10 rounded-full backdrop-blur-md flex items-center justify-center text-white border transition-transform active:scale-90",
+                service.whatsapp 
+                  ? "bg-emerald-500 border-emerald-400 shadow-lg shadow-emerald-500/20" 
+                  : "bg-black/20 border-white/20"
+              )}
+              title="Share on WhatsApp"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </button>
             <button 
               onClick={handleTwitterShare}
-              className="h-10 w-10 rounded-full bg-sky-500 backdrop-blur-md flex items-center justify-center text-white border border-sky-400 shadow-lg shadow-sky-500/20 transition-transform active:scale-90"
+              className="h-10 w-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white border border-white/20 transition-transform active:scale-90"
               title="Share on Twitter"
             >
               <Twitter className="h-5 w-5" />
@@ -315,9 +318,33 @@ export const ServiceDetailsScreen: React.FC = () => {
               </div>
             )}
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-gray-600 leading-relaxed mb-6">
             {service.description} We provide top-notch care for your beloved pets. Our team of professionals is dedicated to ensuring the comfort and safety of every animal that visits us.
           </p>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 gap-3">
+            {service.phone && (
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCall}
+                className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100 transition-all"
+              >
+                <Phone className="h-5 w-5 fill-current" />
+                <span className="text-sm">Call Now</span>
+              </motion.button>
+            )}
+            {service.whatsapp && (
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={handleWhatsAppClick}
+                className="flex items-center justify-center gap-3 py-4 rounded-2xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-100 transition-all"
+              >
+                <MessageCircle className="h-5 w-5 fill-current" />
+                <span className="text-sm">WhatsApp</span>
+              </motion.button>
+            )}
+          </div>
         </section>
 
         {/* Gallery Section */}
@@ -421,7 +448,12 @@ export const ServiceDetailsScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={handleWhatsAppShare}
-              className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-xs hover:bg-emerald-100 transition-colors"
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 p-3 rounded-xl font-bold text-xs transition-colors border",
+                service.whatsapp
+                  ? "bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-100"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
+              )}
             >
               <MessageCircle className="h-4 w-4" />
               Share on WhatsApp

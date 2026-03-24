@@ -32,11 +32,43 @@ export const WhyChooseUs: React.FC<WhyChooseUsProps> = ({ serviceName, category,
         if (Array.isArray(result) && result.length > 0) {
           setUsps(result.slice(0, 3));
         } else {
-          setError(true);
+          throw new Error('Invalid response format');
         }
       } catch (err) {
         console.error('Error generating USPs:', err);
-        setError(true);
+        // Fallback USPs based on category
+        const fallbacks: Record<string, string[]> = {
+          'Grooming': [
+            'Professional grooming with a gentle touch',
+            'Premium pet-safe products for a shiny coat',
+            'Stress-free environment for your furry friends'
+          ],
+          'Vet Clinics': [
+            'Expert medical care from experienced veterinarians',
+            'State-of-the-art diagnostic and treatment facilities',
+            'Compassionate care for all your pet\'s health needs'
+          ],
+          'Pet Shops': [
+            'Wide range of premium pet food and accessories',
+            'Expert advice on pet nutrition and care',
+            'Quality products from trusted global brands'
+          ],
+          'Trainers': [
+            'Positive reinforcement based training methods',
+            'Customized training plans for every pet',
+            'Expert trainers with years of experience'
+          ],
+          'Pet Hotels': [
+            'Safe and comfortable stay for your pets',
+            'Regular exercise and playtime sessions',
+            '24/7 supervision and care by pet lovers'
+          ]
+        };
+        setUsps(fallbacks[category] || [
+          'Dedicated professional care for your pets',
+          'Safe and comfortable environment',
+          'Trusted by pet parents in your community'
+        ]);
       } finally {
         setIsLoading(false);
       }
