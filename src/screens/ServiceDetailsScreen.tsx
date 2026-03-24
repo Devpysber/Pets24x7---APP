@@ -46,6 +46,7 @@ export const ServiceDetailsScreen: React.FC = () => {
   const similarServices = services.filter(s => s.id !== id && s.category === service?.category).slice(0, 3);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
@@ -178,8 +179,14 @@ export const ServiceDetailsScreen: React.FC = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover cursor-grab active:cursor-grabbing"
             referrerPolicy="no-referrer"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.x > 100) prevImage();
+              else if (info.offset.x < -100) nextImage();
+            }}
           />
         </AnimatePresence>
         
@@ -350,35 +357,81 @@ export const ServiceDetailsScreen: React.FC = () => {
         {/* Gallery Section */}
         {gallery.length > 0 && (
           <section>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Gallery</h2>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-              {gallery.map((img, idx) => (
-                <div key={idx} className="flex-shrink-0 flex flex-col gap-2">
-                  <motion.div 
-                    whileTap={{ scale: 0.95 }}
-                    className="relative w-64 aspect-video rounded-2xl overflow-hidden border border-black/5 shadow-sm group cursor-zoom-in"
-                    onClick={() => setZoomedImage(img)}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Gallery</h2>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setGalleryIndex(prev => (prev - 1 + gallery.length) % gallery.length)}
+                  className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-indigo-600 hover:text-white transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={() => setGalleryIndex(prev => (prev + 1) % gallery.length)}
+                  className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-indigo-600 hover:text-white transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="relative overflow-hidden rounded-2xl bg-gray-50 border border-gray-100">
+              <div className="relative aspect-video">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={galleryIndex}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute inset-0 cursor-zoom-in"
+                    onClick={() => setZoomedImage(gallery[galleryIndex])}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x > 50) setGalleryIndex(prev => (prev - 1 + gallery.length) % gallery.length);
+                      else if (info.offset.x < -50) setGalleryIndex(prev => (prev + 1) % gallery.length);
+                    }}
                   >
                     <img 
-                      src={img} 
-                      alt={`${service.name} gallery ${idx + 1}`} 
+                      src={gallery[galleryIndex]} 
+                      alt={`${service.name} gallery ${galleryIndex + 1}`} 
                       className="h-full w-full object-cover"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <Maximize2 className="text-white h-6 w-6" />
+                    <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                      <Maximize2 className="text-white h-8 w-8 drop-shadow-lg" />
                     </div>
                   </motion.div>
-                  {captions[idx] && (
-                    <span className="text-[10px] font-bold text-gray-500 px-2 line-clamp-1 italic">
-                      {captions[idx]}
-                    </span>
-                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Caption */}
+              {captions[galleryIndex] && (
+                <div className="px-4 py-3 bg-white border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-700 italic">
+                    {captions[galleryIndex]}
+                  </p>
                 </div>
-              ))}
+              )}
+
+              {/* Pagination Dots */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {gallery.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setGalleryIndex(idx)}
+                    className={cn(
+                      "h-1.5 rounded-full transition-all duration-300",
+                      idx === galleryIndex ? "w-4 bg-indigo-600" : "w-1.5 bg-gray-300"
+                    )}
+                  />
+                ))}
+              </div>
             </div>
-            <p className="text-[10px] text-gray-400 mt-2 text-center font-medium uppercase tracking-widest">
-              Swipe to explore {gallery.length} images
+            
+            <p className="text-[10px] text-gray-400 mt-3 text-center font-medium uppercase tracking-widest">
+              Swipe or use arrows to explore {gallery.length} images
             </p>
           </section>
         )}
@@ -390,24 +443,35 @@ export const ServiceDetailsScreen: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+              className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 overflow-hidden"
               onClick={() => setZoomedImage(null)}
             >
               <button 
                 className="absolute top-6 right-6 h-12 w-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20 z-[110]"
-                onClick={() => setZoomedImage(null)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoomedImage(null);
+                }}
               >
                 <X className="h-6 w-6" />
               </button>
-              <motion.img 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                src={zoomedImage} 
-                alt="Zoomed view"
-                className="max-w-full max-h-full object-contain rounded-lg"
-                referrerPolicy="no-referrer"
-              />
+              
+              <div className="relative w-full h-full flex items-center justify-center overflow-auto scrollbar-hide">
+                <motion.img 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  whileTap={{ scale: 1.5 }}
+                  src={zoomedImage} 
+                  alt="Zoomed view"
+                  className="max-w-full max-h-full object-contain rounded-lg cursor-zoom-in transition-transform duration-300"
+                  referrerPolicy="no-referrer"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-white/60 text-[10px] font-bold uppercase tracking-widest pointer-events-none">
+                  Tap and hold to zoom
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -510,48 +574,77 @@ export const ServiceDetailsScreen: React.FC = () => {
             </div>
             
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <AnimatePresence initial={false}>
-                <motion.div 
-                  initial={false}
-                  animate={{ height: isHoursExpanded ? 'auto' : '52px' }}
-                  className="overflow-hidden"
-                >
-                  {(Object.entries(service.operatingHours) as [keyof typeof service.operatingHours, any][]).map(([day, hours], idx) => {
-                    const now = new Date();
+              {/* Current Day Summary (Always Visible) */}
+              {!isHoursExpanded && (
+                <div className="flex items-center justify-between px-4 py-4 bg-indigo-50/30">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-indigo-600 capitalize">
+                      {['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()]}
+                    </span>
+                    <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter">Today</span>
+                  </div>
+                  {(() => {
                     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                    const isToday = days[now.getDay()] === day;
-                    
-                    return (
-                      <div 
-                        key={day} 
-                        className={cn(
-                          "flex items-center justify-between px-4 py-4 border-b border-gray-50 last:border-0",
-                          isToday && "bg-indigo-50/30"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={cn(
-                            "text-sm font-bold capitalize",
-                            isToday ? "text-indigo-600" : "text-gray-700"
-                          )}>
-                            {day}
-                          </span>
-                          {isToday && <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter">Today</span>}
-                        </div>
-                        
-                        {hours.closed ? (
-                          <span className="text-xs font-bold text-rose-500 uppercase tracking-wider">Closed</span>
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-gray-700">{hours.open}</span>
-                            <span className="text-gray-300">—</span>
-                            <span className="text-xs font-bold text-gray-700">{hours.close}</span>
-                          </div>
-                        )}
+                    const today = days[new Date().getDay()] as keyof OperatingHours;
+                    const hours = service.operatingHours[today];
+                    return hours.closed ? (
+                      <span className="text-xs font-bold text-rose-500 uppercase tracking-wider">Closed</span>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-gray-700">{hours.open}</span>
+                        <span className="text-gray-300">—</span>
+                        <span className="text-xs font-bold text-gray-700">{hours.close}</span>
                       </div>
                     );
-                  })}
-                </motion.div>
+                  })()}
+                </div>
+              )}
+
+              <AnimatePresence initial={false}>
+                {isHoursExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    {(Object.entries(service.operatingHours) as [keyof typeof service.operatingHours, any][]).map(([day, hours], idx) => {
+                      const now = new Date();
+                      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                      const isToday = days[now.getDay()] === day;
+                      
+                      return (
+                        <div 
+                          key={day} 
+                          className={cn(
+                            "flex items-center justify-between px-4 py-4 border-b border-gray-50 last:border-0",
+                            isToday && "bg-indigo-50/30"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className={cn(
+                              "text-sm font-bold capitalize",
+                              isToday ? "text-indigo-600" : "text-gray-700"
+                            )}>
+                              {day}
+                            </span>
+                            {isToday && <span className="text-[8px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-tighter">Today</span>}
+                          </div>
+                          
+                          {hours.closed ? (
+                            <span className="text-xs font-bold text-rose-500 uppercase tracking-wider">Closed</span>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs font-bold text-gray-700">{hours.open}</span>
+                              <span className="text-gray-300">—</span>
+                              <span className="text-xs font-bold text-gray-700">{hours.close}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
               </AnimatePresence>
               
               <button 
@@ -571,12 +664,20 @@ export const ServiceDetailsScreen: React.FC = () => {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">Location</h2>
-            <Button variant="ghost" size="sm" className="text-indigo-600 p-0 h-auto">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-indigo-600 p-0 h-auto"
+              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`, '_blank')}
+            >
               Open in Maps
             </Button>
           </div>
           <Card className="p-0 overflow-hidden border border-black/5">
-            <div className="h-40 bg-gray-200 relative">
+            <div 
+              className="h-40 bg-gray-200 relative cursor-pointer"
+              onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(service.location)}`, '_blank')}
+            >
               <img 
                 src={`https://picsum.photos/seed/${service.id}map/600/300`} 
                 alt="Map" 
@@ -586,6 +687,9 @@ export const ServiceDetailsScreen: React.FC = () => {
                 <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-xl animate-bounce">
                   <MapPin className="h-6 w-6" />
                 </div>
+              </div>
+              <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-[8px] font-bold text-gray-500 border border-black/5 uppercase tracking-tighter">
+                Tap to expand
               </div>
             </div>
             <div className="p-4 flex items-start gap-3">
