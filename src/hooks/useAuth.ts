@@ -16,7 +16,8 @@ export const useAuth = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const userData = await userApi.login(email, pass);
+      const { user: userData, token } = await userApi.login(email, pass);
+      localStorage.setItem('auth_token', token);
       setUser(userData);
       setUserRole(userData.role);
       return userData;
@@ -33,6 +34,7 @@ export const useAuth = () => {
   }, [setUserRole]);
 
   const logout = useCallback(() => {
+    localStorage.removeItem('auth_token');
     setUser(null);
     setUserRole('user');
   }, [setUser, setUserRole]);

@@ -51,7 +51,7 @@ export default function SubscriptionScreen() {
   ];
 
   const handleUpgrade = () => {
-    updateSubscription('premium');
+    updateSubscription('PLATINUM');
     // In a real app, this would trigger a payment gateway
     setTimeout(() => {
       navigate('/vendor/dashboard');

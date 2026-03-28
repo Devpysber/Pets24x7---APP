@@ -12,17 +12,10 @@ import { cn } from '../utils/theme';
 type CommunityCategory = 'All' | 'Tips' | 'Adoption' | 'Stories';
 
 export const CommunityScreen: React.FC = () => {
-  const { communityPosts, user } = useAppStore();
+  const { communityPosts, user, isLoading } = useAppStore();
   const [activeCategory, setActiveCategory] = useState<CommunityCategory>('All');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Simulate loading
-  React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   const filteredPosts = communityPosts.filter(post => {
     const matchesCategory = activeCategory === 'All' || post.category === activeCategory;

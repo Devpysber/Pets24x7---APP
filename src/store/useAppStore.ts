@@ -1,5 +1,14 @@
 import { create } from 'zustand';
 import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment, Inquiry, Notification } from '../types';
+import { leadsApi } from '../api/leads.api';
+import { vendorApi } from '../api/vendor.api';
+import { listingsApi } from '../api/listings.api';
+import { lostFoundApi } from '../api/lostfound.api';
+import { communityApi } from '../api/community.api';
+import { bannersApi } from '../api/banners.api';
+import { notificationsApi } from '../api/notifications.api';
+import { userApi } from '../api/user.api';
+import { subscriptionApi } from '../api/subscription.api';
 
 interface AppState {
   user: User | null;
@@ -15,16 +24,16 @@ interface AppState {
   userRole: 'user' | 'vendor' | 'admin';
   leadCredits: number;
   subscription: {
-    plan: 'free' | 'premium';
+    plan: 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM';
     expiryDate?: string;
-    status: 'active' | 'expired' | 'none';
+    isActive: boolean;
   };
   isInquiryModalOpen: boolean;
-  selectedServiceForInquiry: { id: string; name: string; initialType?: string } | null;
+  selectedServiceForInquiry: { id: string; vendorId: string; name: string; initialType?: string } | null;
   setUser: (user: User | null) => void;
   setUserRole: (role: 'user' | 'vendor' | 'admin') => void;
   buyLeads: (amount: number) => void;
-  updateSubscription: (plan: 'free' | 'premium') => void;
+  updateSubscription: (plan: 'FREE' | 'SILVER' | 'GOLD' | 'PLATINUM') => Promise<void>;
   cancelSubscription: () => void;
   setServices: (services: PetService[]) => void;
   addService: (service: Omit<PetService, 'id'>) => void;
@@ -49,215 +58,218 @@ interface AppState {
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   clearNotifications: () => void;
-  openInquiryModal: (service: { id: string; name: string; initialType?: string }) => void;
+  fetchVendorStats: (vendorId: string) => Promise<void>;
+  openInquiryModal: (service: { id: string; vendorId: string; name: string; initialType?: string }) => void;
   closeInquiryModal: () => void;
+  initialize: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  user: {
-    id: 'u1',
-    name: 'Antriksh Shah',
-    email: 'shah.antriksh@gmail.com',
-    avatar: 'https://picsum.photos/seed/user1/100/100',
-    role: 'admin',
-  },
-  userRole: 'admin', // Defaulting to admin for testing the dashboard
-  leadCredits: 50,
+export const useAppStore = create<AppState>((set, get) => ({
+  user: null,
+  userRole: 'user',
+  leadCredits: 0,
   subscription: {
-    plan: 'free',
-    status: 'none'
+    plan: 'FREE',
+    isActive: true
   },
   isInquiryModalOpen: false,
   selectedServiceForInquiry: null,
   location: 'Mumbai',
   favorites: [],
   inquiries: [],
-  notifications: [
-    {
-      id: 'n1',
-      type: 'lead',
-      title: 'New Lead Received!',
-      message: 'Someone is interested in "Happy Paws Grooming". Check it out!',
-      isRead: false,
-      createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      link: '/vendor/dashboard'
-    },
-    {
-      id: 'n2',
-      type: 'reminder',
-      title: 'Complete Your Profile',
-      message: 'A complete profile gets 3x more leads. Add your business images now!',
-      isRead: false,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      link: '/vendor/dashboard'
-    },
-    {
-      id: 'n3',
-      type: 'lost_found',
-      title: 'Lost Pet Alert!',
-      message: 'A Golden Retriever was reported lost near your location.',
-      isRead: true,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      link: '/lost-found'
-    }
-  ],
-  banners: [
-    {
-      id: 'b1',
-      title: 'Monsoon Pet Care Sale',
-      image: 'https://picsum.photos/seed/petbanner1/800/400',
-      link: '/offers'
-    },
-    {
-      id: 'b2',
-      title: 'Free Vet Consultation',
-      image: 'https://picsum.photos/seed/petbanner2/800/400',
-      link: '/vets'
-    }
-  ],
-  services: [
-    {
-      id: 's1',
-      vendorId: 'u1',
-      vendorName: 'Antriksh Shah',
-      name: 'Happy Paws Grooming',
-      category: 'Grooming',
-      rating: 4.8,
-      reviewCount: 124,
-      image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=400',
-      location: 'Andheri West, Mumbai',
-      price: '₹800',
-      description: 'Professional grooming services for all breeds. We use organic shampoos and provide a stress-free environment.',
-      phone: '9876543210',
-      whatsapp: '9876543210',
-      isVerified: true,
-      isPremium: true,
-      isTopRated: true,
-      coordinates: { lat: 19.1136, lng: 72.8697 },
-      gallery: [
-        'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&q=80&w=800'
-      ],
-      galleryCaptions: [
-        'Professional grooming session',
-        'Happy customer after a bath',
-        'Our premium grooming tools'
-      ]
-    },
-    {
-      id: 's2',
-      vendorId: 'u1',
-      vendorName: 'Antriksh Shah',
-      name: 'Doggy Daycare Center',
-      category: 'Daycare',
-      rating: 4.5,
-      reviewCount: 89,
-      image: 'https://images.unsplash.com/photo-1541599540903-216a46ca1df0?auto=format&fit=crop&q=80&w=400',
-      location: 'Bandra East, Mumbai',
-      price: '₹500/day',
-      description: 'Safe and fun daycare for your furry friends. Large play area and experienced staff.',
-      phone: '9876543211',
-      whatsapp: '9876543211',
-      isVerified: true,
-      isPremium: false,
-      isMostBooked: true,
-      coordinates: { lat: 19.0522, lng: 72.8489 },
-      gallery: [
-        'https://images.unsplash.com/photo-1541599540903-216a46ca1df0?auto=format&fit=crop&q=80&w=800',
-        'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800'
-      ],
-      galleryCaptions: [
-        'Our spacious play area',
-        'Furry friends having fun'
-      ]
-    }
-  ],
+  notifications: [],
+  banners: [],
+  services: [],
   lostFoundPosts: [],
-  communityPosts: [
-    {
-      id: 'cp1',
-      userId: 'u2',
-      userName: 'Sarah Jenkins',
-      userImage: 'https://picsum.photos/seed/user3/100/100',
-      category: 'Tips',
-      content: 'Always keep your pets hydrated during the summer months. Carry a portable water bowl whenever you go out!',
-      image: 'https://picsum.photos/seed/pettip1/600/400',
-      likes: ['u1'],
-      comments: [
-        {
-          id: 'c1',
-          userId: 'u1',
-          userName: 'Antriksh Shah',
-          userImage: 'https://picsum.photos/seed/user1/100/100',
-          text: 'Great tip! I always carry one for my Lab.',
-          createdAt: new Date().toISOString()
-        }
-      ],
-      createdAt: new Date().toISOString(),
-      serviceId: 's1'
-    },
-    {
-      id: 'cp2',
-      userId: 'u3',
-      userName: 'Michael Chen',
-      userImage: 'https://picsum.photos/seed/user4/100/100',
-      category: 'Stories',
-      content: 'Adopted this little guy yesterday. He was so scared at the shelter, but now he won\'t stop wagging his tail!',
-      image: 'https://picsum.photos/seed/petstory1/600/400',
-      likes: [],
-      comments: [],
-      createdAt: new Date().toISOString(),
-      serviceId: 's2'
-    }
-  ],
+  communityPosts: [],
   isLoading: false,
+
+  initialize: async () => {
+    set({ isLoading: true });
+    try {
+      const [banners, listingsResponse, communityPosts, lostFoundPosts] = await Promise.all([
+        bannersApi.getBanners(),
+        listingsApi.getListings(),
+        communityApi.getPosts(),
+        lostFoundApi.getLostFoundPosts(),
+      ]);
+
+      set({
+        banners,
+        services: listingsResponse.data,
+        communityPosts,
+        lostFoundPosts,
+      });
+
+      // If user is logged in, fetch their profile and notifications
+      const user = get().user;
+      if (user) {
+        const [notifications, profile] = await Promise.all([
+          notificationsApi.getNotifications(),
+          userApi.getProfile(),
+        ]);
+        set({ notifications, user: profile, userRole: profile.role });
+        if (profile.role === 'vendor') {
+          await get().fetchVendorStats(profile.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to initialize app data:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  login: async (email, password) => {
+    set({ isLoading: true });
+    try {
+      const { user, token } = await userApi.login(email, password);
+      localStorage.setItem('auth_token', token);
+      set({ user, userRole: user.role });
+      await get().initialize();
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('auth_token');
+    set({
+      user: null,
+      userRole: 'user',
+      notifications: [],
+      inquiries: [],
+      leadCredits: 0,
+      subscription: { plan: 'FREE', isActive: true },
+    });
+  },
+
+  fetchVendorStats: async (vendorId) => {
+    try {
+      const stats = await vendorApi.getStats(vendorId);
+      set({
+        leadCredits: stats.leadCredits,
+        subscription: stats.subscription,
+      });
+    } catch (error) {
+      console.error('Failed to fetch vendor stats:', error);
+    }
+  },
   setUser: (user) => set({ user }),
   setUserRole: (role) => set({ userRole: role }),
-  buyLeads: (amount) => set((state) => ({ leadCredits: state.leadCredits + amount })),
-  updateSubscription: (plan) => set({
-    subscription: {
-      plan,
-      status: 'active',
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  buyLeads: async (amount) => {
+    const state = get();
+    // In a real app, we'd get the vendorId from the user's profile
+    const vendorId = 'v1'; 
+    try {
+      const newBalance = await leadsApi.buyLeads(vendorId, amount);
+      set({ leadCredits: newBalance });
+    } catch (error) {
+      console.error('Failed to buy leads:', error);
+      // Fallback to local state if API fails
+      set((state) => ({ leadCredits: state.leadCredits + amount }));
     }
-  }),
+  },
+  updateSubscription: async (plan) => {
+    set({ isLoading: true });
+    try {
+      const { subscription } = await subscriptionApi.upgrade(plan);
+      set({ subscription });
+      // Refresh listings to reflect premium status
+      const response = await listingsApi.getListings();
+      set({ services: response.data });
+    } catch (error) {
+      console.error('Failed to upgrade subscription:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
   cancelSubscription: () => set({
     subscription: {
-      plan: 'free',
-      status: 'none'
+      plan: 'FREE',
+      isActive: true
     }
   }),
   setServices: (services) => set({ services }),
-  addService: (service) => set((state) => ({
-    services: [...state.services, { ...service, id: `s${state.services.length + 1}` }]
-  })),
-  updateService: (id, updatedService) => set((state) => ({
-    services: state.services.map(s => s.id === id ? { ...s, ...updatedService } : s)
-  })),
-  deleteService: (id) => set((state) => ({
-    services: state.services.filter(s => s.id !== id)
-  })),
-  approveService: (id) => set((state) => ({
-    services: state.services.map(s => s.id === id ? { ...s, isVerified: true } : s)
-  })),
-  deleteLostFoundPost: (id) => set((state) => ({
-    lostFoundPosts: state.lostFoundPosts.filter(p => p.id !== id)
-  })),
+  addService: async (serviceData) => {
+    set({ isLoading: true });
+    try {
+      const newService = await listingsApi.createListing(serviceData);
+      set((state) => ({
+        services: [newService, ...state.services]
+      }));
+    } catch (error) {
+      console.error('Failed to add service:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  updateService: async (id, updatedService) => {
+    set({ isLoading: true });
+    try {
+      const updated = await listingsApi.updateListing(id, updatedService);
+      set((state) => ({
+        services: state.services.map(s => s.id === id ? updated : s)
+      }));
+    } catch (error) {
+      console.error('Failed to update service:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  deleteService: async (id) => {
+    set({ isLoading: true });
+    try {
+      await listingsApi.deleteListing(id);
+      set((state) => ({
+        services: state.services.filter(s => s.id !== id)
+      }));
+    } catch (error) {
+      console.error('Failed to delete service:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  approveService: async (id) => {
+    try {
+      await listingsApi.updateListing(id, { isVerified: true });
+      set((state) => ({
+        services: state.services.map(s => s.id === id ? { ...s, isVerified: true } : s)
+      }));
+    } catch (error) {
+      console.error('Failed to approve service:', error);
+    }
+  },
+  deleteLostFoundPost: async (id) => {
+    try {
+      await lostFoundApi.deletePost(id);
+      set((state) => ({
+        lostFoundPosts: state.lostFoundPosts.filter(p => p.id !== id)
+      }));
+    } catch (error) {
+      console.error('Failed to delete lost/found post:', error);
+    }
+  },
   setLoading: (isLoading) => set({ isLoading }),
   setLocation: (location) => set({ location }),
-  addLostFoundPost: (post) => set((state) => ({
-    lostFoundPosts: [
-      {
-        ...post,
-        id: Math.random().toString(36).substring(7),
-        createdAt: new Date().toISOString(),
-        userName: state.user?.name || 'Guest User',
-        userImage: state.user?.avatar || 'https://picsum.photos/seed/guest/100/100'
-      },
-      ...state.lostFoundPosts
-    ]
-  })),
+  addLostFoundPost: async (postData) => {
+    set({ isLoading: true });
+    try {
+      const newPost = await lostFoundApi.createPost(postData);
+      set((state) => ({
+        lostFoundPosts: [newPost, ...state.lostFoundPosts]
+      }));
+    } catch (error) {
+      console.error('Failed to add lost/found post:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
   updateLostFoundPost: (id, updatedPost) => set((state) => ({
     lostFoundPosts: state.lostFoundPosts.map(p => p.id === id ? { ...p, ...updatedPost } : p)
   })),
@@ -266,90 +278,144 @@ export const useAppStore = create<AppState>((set) => ({
       ? state.favorites.filter(id => id !== serviceId)
       : [...state.favorites, serviceId]
   })),
-  addInquiry: (inquiry) => set((state) => ({
-    inquiries: [
-      {
-        ...inquiry,
-        id: Math.random().toString(36).substring(7),
+  addInquiry: async (inquiryData) => {
+    const state = get();
+    set({ isLoading: true });
+    try {
+      const newInquiry = await leadsApi.createLead({
+        ...inquiryData,
         userId: state.user?.id || 'guest',
         status: 'new',
-        createdAt: new Date().toISOString()
-      },
-      ...state.inquiries
-    ]
-  })),
-  updateInquiryStatus: (id, status) => set((state) => ({
-    inquiries: state.inquiries.map(inq => inq.id === id ? { ...inq, status } : inq)
-  })),
-  addCommunityPost: (post) => set((state) => ({
-    communityPosts: [
-      {
-        ...post,
-        id: Math.random().toString(36).substring(7),
-        userId: state.user?.id || 'guest',
-        userName: state.user?.name || 'Guest User',
-        userImage: state.user?.avatar || 'https://picsum.photos/seed/guest/100/100',
-        likes: [],
-        comments: [],
-        createdAt: new Date().toISOString(),
-        serviceId: post.serviceId
-      },
-      ...state.communityPosts
-    ]
-  })),
-  updateCommunityPost: (id, updatedPost) => set((state) => ({
-    communityPosts: state.communityPosts.map(p => p.id === id ? { ...p, ...updatedPost } : p)
-  })),
-  deleteCommunityPost: (id) => set((state) => ({
-    communityPosts: state.communityPosts.filter(p => p.id !== id)
-  })),
-  toggleLikeCommunityPost: (postId) => set((state) => ({
-    communityPosts: state.communityPosts.map(post => {
-      if (post.id === postId) {
-        const userId = state.user?.id || 'guest';
-        const likes = post.likes.includes(userId)
-          ? post.likes.filter(id => id !== userId)
-          : [...post.likes, userId];
-        return { ...post, likes };
-      }
-      return post;
-    })
-  })),
-  addCommunityComment: (postId, text) => set((state) => ({
-    communityPosts: state.communityPosts.map(post => {
-      if (post.id === postId) {
-        const newComment: CommunityComment = {
-          id: Math.random().toString(36).substring(7),
-          userId: state.user?.id || 'guest',
-          userName: state.user?.name || 'Guest User',
-          userImage: state.user?.avatar || 'https://picsum.photos/seed/guest/100/100',
-          text,
-          createdAt: new Date().toISOString()
-        };
-        return { ...post, comments: [...post.comments, newComment] };
-      }
-      return post;
-    })
-  })),
+      });
+      set((state) => ({
+        inquiries: [newInquiry, ...state.inquiries]
+      }));
+      
+      // Add notification for the vendor
+      get().addNotification({
+        userId: newInquiry.vendorId,
+        type: 'lead',
+        title: 'New Lead Received!',
+        message: `${newInquiry.userName} is interested in "${newInquiry.serviceName}".`,
+        link: '/vendor/dashboard'
+      });
+    } catch (error) {
+      console.error('Failed to create lead:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  updateInquiryStatus: async (id, status) => {
+    try {
+      await leadsApi.updateLeadStatus(id, status);
+      set((state) => ({
+        inquiries: state.inquiries.map(inq => inq.id === id ? { ...inq, status } : inq)
+      }));
+    } catch (error) {
+      console.error('Failed to update lead status:', error);
+    }
+  },
+  addCommunityPost: async (postData) => {
+    set({ isLoading: true });
+    try {
+      const newPost = await communityApi.createPost(postData);
+      set((state) => ({
+        communityPosts: [newPost, ...state.communityPosts]
+      }));
+    } catch (error) {
+      console.error('Failed to add community post:', error);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  updateCommunityPost: async (id, updatedPost) => {
+    try {
+      const updated = await communityApi.updatePost(id, updatedPost);
+      set((state) => ({
+        communityPosts: state.communityPosts.map(p => p.id === id ? updated : p)
+      }));
+    } catch (error) {
+      console.error('Failed to update community post:', error);
+    }
+  },
+  deleteCommunityPost: async (id) => {
+    try {
+      await communityApi.deletePost(id);
+      set((state) => ({
+        communityPosts: state.communityPosts.filter(p => p.id !== id)
+      }));
+    } catch (error) {
+      console.error('Failed to delete community post:', error);
+    }
+  },
+  toggleLikeCommunityPost: async (postId) => {
+    try {
+      const { likes } = await communityApi.toggleLike(postId);
+      set((state) => ({
+        communityPosts: state.communityPosts.map(post => 
+          post.id === postId ? { ...post, likes } : post
+        )
+      }));
+    } catch (error) {
+      console.error('Failed to toggle like:', error);
+    }
+  },
+  addCommunityComment: async (postId, text) => {
+    try {
+      const newComment = await communityApi.addComment(postId, text);
+      set((state) => ({
+        communityPosts: state.communityPosts.map(post => 
+          post.id === postId ? { ...post, comments: [...post.comments, newComment] } : post
+        )
+      }));
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    }
+  },
   setLostFoundPosts: (lostFoundPosts) => set({ lostFoundPosts }),
-  addNotification: (notification) => set((state) => ({
-    notifications: [
-      {
-        ...notification,
-        id: Math.random().toString(36).substring(7),
-        isRead: false,
-        createdAt: new Date().toISOString()
-      },
-      ...state.notifications
-    ]
-  })),
-  markNotificationAsRead: (id) => set((state) => ({
-    notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
-  })),
-  markAllNotificationsAsRead: () => set((state) => ({
-    notifications: state.notifications.map(n => ({ ...n, isRead: true }))
-  })),
-  clearNotifications: () => set({ notifications: [] }),
+  addNotification: async (notificationData) => {
+    // This might be called from other actions, or automatically by the backend
+    // For now, let's assume we can add them locally if needed, but usually they come from API
+    set((state) => ({
+      notifications: [
+        {
+          ...notificationData,
+          id: Math.random().toString(36).substring(7),
+          isRead: false,
+          createdAt: new Date().toISOString()
+        },
+        ...state.notifications
+      ]
+    }));
+  },
+  markNotificationAsRead: async (id) => {
+    try {
+      await notificationsApi.markAsRead(id);
+      set((state) => ({
+        notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
+      }));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  },
+  markAllNotificationsAsRead: async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      set((state) => ({
+        notifications: state.notifications.map(n => ({ ...n, isRead: true }))
+      }));
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  },
+  clearNotifications: async () => {
+    try {
+      await notificationsApi.clearAll();
+      set({ notifications: [] });
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+    }
+  },
   openInquiryModal: (service) => set({ 
     selectedServiceForInquiry: service, 
     isInquiryModalOpen: true 

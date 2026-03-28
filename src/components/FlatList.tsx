@@ -52,7 +52,7 @@ export function FlatList<T>({
         components={{
           Header: () => <>{ListHeaderComponent}</>,
           Footer: () => <>{ListFooterComponent}</>,
-          List: React.forwardRef(({ children, ...props }, ref) => (
+          List: React.forwardRef<HTMLDivElement, { children?: React.ReactNode }>(({ children, ...props }, ref) => (
             <div 
               {...props} 
               ref={ref} 

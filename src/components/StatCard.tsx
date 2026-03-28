@@ -13,6 +13,7 @@ interface StatCardProps {
   };
   color?: string;
   className?: string;
+  onClick?: () => void;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({ 
@@ -21,10 +22,14 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon: Icon, 
   trend, 
   color = 'bg-indigo-50 text-indigo-600',
-  className 
+  className,
+  onClick
 }) => {
   return (
-    <Card className={cn("p-4 flex items-center gap-4", className)}>
+    <Card 
+      className={cn("p-4 flex items-center gap-4 cursor-pointer transition-all active:scale-95", className)}
+      onClick={onClick}
+    >
       <div className={cn("p-3 rounded-xl", color)}>
         <Icon size={20} />
       </div>

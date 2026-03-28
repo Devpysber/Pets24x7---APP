@@ -111,7 +111,7 @@ export const ServiceDetailsScreen: React.FC = () => {
 
   const handleCall = () => {
     if (!service) return;
-    openInquiryModal({ id: service.id, name: service.name, initialType: 'Call Request' });
+    openInquiryModal({ id: service.id, vendorId: service.vendorId, name: service.name, initialType: 'Call Request' });
     window.location.href = `tel:${service.phone}`;
   };
 
@@ -277,7 +277,7 @@ export const ServiceDetailsScreen: React.FC = () => {
           {service.isPremium && (
             <div className="flex items-center gap-2">
               <PremiumBadge size="md" className="w-fit" />
-              <Badge variant="success" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 backdrop-blur-sm">Verified Partner</Badge>
+              <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 backdrop-blur-sm">Verified Partner</Badge>
             </div>
           )}
           <h1 className="text-3xl font-black text-white leading-tight drop-shadow-lg">{service.name}</h1>
@@ -800,6 +800,7 @@ export const ServiceDetailsScreen: React.FC = () => {
           <div className="flex gap-2">
             <ActionButtons 
               serviceId={service.id}
+              vendorId={service.vendorId}
               serviceName={service.name}
               serviceImage={service.image}
               phone={service.phone} 
@@ -812,7 +813,7 @@ export const ServiceDetailsScreen: React.FC = () => {
             </Button>
           </div>
           <Button 
-            onClick={() => openInquiryModal({ id: service.id, name: service.name })}
+            onClick={() => openInquiryModal({ id: service.id, vendorId: service.vendorId, name: service.name })}
             className="flex-1 h-12 bg-indigo-600 shadow-lg shadow-indigo-100 font-bold"
           >
             Send Inquiry

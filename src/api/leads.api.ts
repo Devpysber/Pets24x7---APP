@@ -1,34 +1,23 @@
 import { Inquiry } from '../types';
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import axiosInstance from './axiosInstance';
 
 export const leadsApi = {
   createLead: async (inquiry: Omit<Inquiry, 'id' | 'createdAt'>): Promise<Inquiry> => {
-    await delay(1000);
-    // In a real app, this would be:
-    // const response = await axiosInstance.post('/leads', inquiry);
-    // return response.data;
-    const newInquiry: Inquiry = {
-      ...inquiry,
-      id: `i${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
-    return newInquiry;
+    const response = await axiosInstance.post('/leads', inquiry);
+    return response.data;
   },
 
-  getLeads: async (): Promise<Inquiry[]> => {
-    await delay(500);
-    // In a real app, this would be:
-    // const response = await axiosInstance.get('/leads');
-    // return response.data;
-    return [];
+  getLeads: async (vendorId: string): Promise<Inquiry[]> => {
+    const response = await axiosInstance.get(`/leads/vendor/${vendorId}`);
+    return response.data.leads;
   },
 
-  buyLeads: async (amount: number): Promise<number> => {
-    await delay(1000);
-    // In a real app, this would be:
-    // const response = await axiosInstance.post('/leads/buy', { amount });
-    // return response.data.newBalance;
-    return amount;
+  updateLeadStatus: async (id: string, status: string): Promise<void> => {
+    await axiosInstance.patch(`/leads/${id}/status`, { status });
+  },
+
+  buyLeads: async (vendorId: string, amount: number): Promise<number> => {
+    const response = await axiosInstance.post('/leads/buy', { vendorId, amount });
+    return response.data.newBalance;
   }
 };

@@ -12,8 +12,8 @@ export const useServices = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listingsApi.getListings();
-      setServices(data);
+      const response = await listingsApi.getListings();
+      setServices(response.data);
     } catch (err) {
       setError('Failed to fetch services. Please try again.');
       console.error(err);

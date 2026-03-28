@@ -6,6 +6,7 @@ import { useAppStore } from '../store/useAppStore';
 
 interface ActionButtonsProps {
   serviceId: string;
+  vendorId: string;
   serviceName: string;
   serviceImage: string;
   phone: string;
@@ -18,6 +19,7 @@ interface ActionButtonsProps {
 
 export const ActionButtons: React.FC<ActionButtonsProps> = memo(({ 
   serviceId,
+  vendorId,
   serviceName,
   serviceImage,
   phone, 
@@ -29,9 +31,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
 }) => {
   const { addInquiry, user, openInquiryModal } = useAppStore();
 
-  const trackLead = useCallback((type: 'call' | 'whatsapp') => {
+  const trackLead = useCallback((type: 'call' | 'whatsapp' | 'inquiry') => {
     addInquiry({
       serviceId,
+      vendorId,
       serviceName,
       serviceImage,
       userName: user?.name || 'Guest User',
@@ -39,7 +42,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
       message: `User clicked ${type} button`,
       type,
     });
-  }, [addInquiry, serviceId, serviceName, serviceImage, user]);
+  }, [addInquiry, serviceId, vendorId, serviceName, serviceImage, user]);
 
   const handleCall = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,9 +62,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
     if (onInquiry) {
       onInquiry();
     } else {
-      openInquiryModal({ id: serviceId, name: serviceName });
+      openInquiryModal({ id: serviceId, vendorId, name: serviceName });
     }
-  }, [onInquiry, openInquiryModal, serviceId, serviceName, trackLead]);
+  }, [onInquiry, openInquiryModal, serviceId, vendorId, serviceName, trackLead]);
 
   const buttonSizeClass = cn(
     size === 'sm' ? "h-8 w-8 p-0" : size === 'md' ? "h-10 w-10 p-0" : "h-12 w-12 p-0"

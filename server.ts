@@ -3,11 +3,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
-import { logger } from './server/src/middlewares/logger.js';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import { errorHandler } from './server/src/middlewares/error.js';
 import apiRoutes from './server/src/routes/index.js';
+import { initErrorTracking } from './server/src/utils/errorTracking.js';
 
 dotenv.config();
+initErrorTracking();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,8 +21,12 @@ async function startServer() {
   const PORT = 3000;
 
   // Middlewares
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable for Vite dev server compatibility
+  }));
+  app.use(compression());
+  app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
   app.use(express.json());
-  app.use(logger);
 
   // API Routes
   app.use('/api', apiRoutes);
@@ -41,8 +49,15 @@ async function startServer() {
   // Error Handler
   app.use(errorHandler);
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', async () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    try {
+      const { prisma } = await import('./server/src/lib/prisma.js');
+      await prisma.$connect();
+      console.log('Database connected successfully');
+    } catch (error) {
+      console.error('Database connection failed:', error);
+    }
   });
 }
 

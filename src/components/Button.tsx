@@ -2,10 +2,11 @@ import React from 'react';
 import { cn } from '../utils/theme';
 import { motion, HTMLMotionProps } from 'motion/react';
 
-interface ButtonProps extends HTMLMotionProps<'button'> {
+interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({

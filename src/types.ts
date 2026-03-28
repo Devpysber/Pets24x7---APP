@@ -17,6 +17,7 @@ export type InquiryStatus = 'new' | 'contacted' | 'closed';
 export interface Inquiry {
   id: string;
   serviceId: string;
+  vendorId: string;
   serviceName: string;
   serviceImage: string;
   userId: string;
@@ -123,6 +124,7 @@ export type NotificationType = 'lead' | 'message' | 'lost_found' | 'reminder' | 
 
 export interface Notification {
   id: string;
+  userId: string;
   type: NotificationType;
   title: string;
   message: string;

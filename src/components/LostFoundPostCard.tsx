@@ -55,7 +55,7 @@ export const LostFoundPostCard: React.FC<LostFoundPostCardProps> = ({ post }) =>
             </p>
           </div>
         </div>
-        <Badge variant={post.type === 'lost' ? 'danger' : 'success'} className="uppercase text-[10px] tracking-wider">
+        <Badge variant={post.type === 'lost' ? 'lost' : 'found'} className="uppercase text-[10px] tracking-wider">
           {post.type}
         </Badge>
       </div>

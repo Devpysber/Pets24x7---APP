@@ -1,31 +1,39 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useServices } from '../hooks/useServices';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { listingsApi } from '../api/listings.api';
 import { ListingCard } from '../components/ListingCard';
 import { LoadingSpinner, ErrorMessage } from '../components/Feedback';
 import { ListingSkeleton } from '../components/Skeleton';
 import { NoResultsState } from '../components/EmptyState';
-import { Search, LayoutGrid, List, SlidersHorizontal, ChevronDown, MapPin } from 'lucide-react';
+import { Search, LayoutGrid, List, SlidersHorizontal, ChevronDown, MapPin, Dog, Star } from 'lucide-react';
 import { cn } from '../utils/theme';
 import { motion, AnimatePresence } from 'motion/react';
 import { FlatList } from '../components/FlatList';
 import { PetService } from '../types';
 
 const SERVICE_CATEGORIES = ['Pet Shops', 'Vet Clinics', 'Grooming', 'Trainers', 'Pet Hotels', 'Daycare', 'Events', 'Boarding', 'Walking'];
-const ITEMS_PER_PAGE = 6;
+const PET_TYPES = ['Dogs', 'Cats', 'Birds', 'Rabbits', 'Fish', 'Reptiles'];
+const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata'];
+const ITEMS_PER_PAGE = 10;
 
 export const ExploreScreen: React.FC = () => {
-  const { services, isLoading, error, refresh } = useServices();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [services, setServices] = useState<PetService[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [viewType, setViewType] = useState<'grid' | 'list'>('list');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categorySearch, setCategorySearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(5000);
-  const [maxDistance, setMaxDistance] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<'Top Rated' | 'Most Booked' | 'Price: Low to High' | 'Distance'>('Top Rated');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(searchParams.get('category') || null);
+  const [selectedPetType, setSelectedPetType] = useState<string | null>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [minRating, setMinRating] = useState<number>(0);
+  const [sortBy, setSortBy] = useState<'Top Rated' | 'Most Booked' | 'Distance' | 'Newest'>('Top Rated');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle');
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const requestLocation = useCallback(() => {
     if (locationStatus === 'requesting') return;
@@ -47,112 +55,65 @@ export const ExploreScreen: React.FC = () => {
     );
   }, [locationStatus]);
 
+  const fetchResults = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params: any = {
+        search: searchQuery || undefined,
+        category: selectedCategory || undefined,
+        petType: selectedPetType || undefined,
+        city: selectedCity || undefined,
+        minRating: minRating > 0 ? minRating : undefined,
+        sortBy: sortBy === 'Top Rated' ? 'rating' : sortBy === 'Distance' ? 'nearest' : sortBy,
+        lat: userLocation?.lat,
+        lng: userLocation?.lng,
+        limit: 100 // Fetch more for local pagination if needed, or just use backend pagination
+      };
+
+      const response = await listingsApi.getListings(params);
+      setServices(response.data);
+      setTotalResults(response.meta.total);
+    } catch (err) {
+      setError('Failed to fetch services. Please try again.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedCategory, selectedPetType, selectedCity, minRating, sortBy, userLocation]);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      fetchResults();
+      // Update URL params
+      const newParams: any = {};
+      if (searchQuery) newParams.search = searchQuery;
+      if (selectedCategory) newParams.category = selectedCategory;
+      setSearchParams(newParams, { replace: true });
+    }, 500);
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, [fetchResults, searchQuery, selectedCategory, setSearchParams]);
+
   // Get user location for distance sorting
   useEffect(() => {
-    if ((sortBy === 'Distance' || maxDistance === 5) && !userLocation && locationStatus === 'idle') {
+    if (sortBy === 'Distance' && !userLocation && locationStatus === 'idle') {
       requestLocation();
     }
-  }, [sortBy, maxDistance, userLocation, locationStatus, requestLocation]);
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  // Filter and Sort Logic
-  const filteredServices = useMemo(() => {
-    let result = services.filter(s => s.isVerified);
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(s => 
-        s.name.toLowerCase().includes(query) ||
-        s.category.toLowerCase().includes(query)
-      );
-    }
-
-    // Category filter
-    if (selectedCategory) {
-      result = result.filter(s => s.category === selectedCategory);
-    }
-
-    // Price filter
-    if (minPrice > 0 || maxPrice < 5000) {
-      result = result.filter(s => {
-        const price = parseInt(s.price?.replace(/[^0-9]/g, '') || '0');
-        return price >= minPrice && price <= maxPrice;
-      });
-    }
-
-    // Distance filter (5km radius)
-    if (maxDistance && userLocation) {
-      result = result.filter(s => {
-        if (!s.coordinates) return false;
-        const dist = calculateDistance(userLocation.lat, userLocation.lng, s.coordinates.lat, s.coordinates.lng);
-        return dist <= maxDistance;
-      });
-    }
-
-    // Sort: Premium first, then by selected criteria
-    result.sort((a, b) => {
-      // Premium always first
-      if (a.isPremium && !b.isPremium) return -1;
-      if (!a.isPremium && b.isPremium) return 1;
-      
-      if (sortBy === 'Top Rated') {
-        return (b.rating || 0) - (a.rating || 0);
-      }
-      if (sortBy === 'Most Booked') {
-        if (a.isMostBooked && !b.isMostBooked) return -1;
-        if (!a.isMostBooked && b.isMostBooked) return 1;
-        return (b.reviewCount || 0) - (a.reviewCount || 0);
-      }
-      if (sortBy === 'Price: Low to High') {
-        const priceA = parseInt(a.price?.replace(/[^0-9]/g, '') || '0');
-        const priceB = parseInt(b.price?.replace(/[^0-9]/g, '') || '0');
-        return priceA - priceB;
-      }
-      if (sortBy === 'Distance' && userLocation) {
-        if (!a.coordinates || !b.coordinates) return 0;
-        const distA = calculateDistance(userLocation.lat, userLocation.lng, a.coordinates.lat, a.coordinates.lng);
-        const distB = calculateDistance(userLocation.lat, userLocation.lng, b.coordinates.lat, b.coordinates.lng);
-        return distA - distB;
-      }
-      return 0;
-    });
-
-    return result;
-  }, [services, searchQuery, sortBy, selectedCategory, userLocation]);
-
-  const filteredCategories = useMemo(() => {
-    if (!categorySearch) return SERVICE_CATEGORIES;
-    return SERVICE_CATEGORIES.filter(cat => 
-      cat.toLowerCase().includes(categorySearch.toLowerCase())
-    );
-  }, [categorySearch]);
-
-  // Reset visible count when filters change
-  useEffect(() => {
-    setVisibleCount(ITEMS_PER_PAGE);
-  }, [searchQuery, selectedCategory, sortBy]);
-
-  const visibleServices = useMemo(() => {
-    return filteredServices.slice(0, visibleCount);
-  }, [filteredServices, visibleCount]);
+  }, [sortBy, userLocation, locationStatus, requestLocation]);
 
   const handleLoadMore = useCallback(() => {
-    if (visibleCount < filteredServices.length) {
+    if (visibleCount < services.length) {
       setVisibleCount(prev => prev + ITEMS_PER_PAGE);
     }
-  }, [visibleCount, filteredServices.length]);
+  }, [visibleCount, services.length]);
+
+  const visibleServices = useMemo(() => {
+    return services.slice(0, visibleCount);
+  }, [services, visibleCount]);
 
   const toggleView = useCallback(() => {
     setViewType(prev => prev === 'grid' ? 'list' : 'grid');
@@ -211,24 +172,18 @@ export const ExploreScreen: React.FC = () => {
 
         {/* Filters and Sort */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+          {/* Category Filter */}
           <div className="relative group flex-shrink-0">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold whitespace-nowrap">
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all",
+              selectedCategory ? "bg-indigo-600 text-white" : "bg-white border border-black/5 text-gray-600"
+            )}>
               <SlidersHorizontal className="h-3 w-3" />
-              Categories
+              {selectedCategory || 'Categories'}
             </button>
             <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-3">
-              <div className="relative mb-3">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-                <input
-                  type="text"
-                  value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
-                  placeholder="Search categories..."
-                  className="w-full pl-7 pr-3 py-1.5 text-[10px] rounded-lg border border-black/5 bg-gray-50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
               <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto no-scrollbar">
-                {filteredCategories.map(category => (
+                {SERVICE_CATEGORIES.map(category => (
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
@@ -242,51 +197,117 @@ export const ExploreScreen: React.FC = () => {
                     {category}
                   </button>
                 ))}
-                {filteredCategories.length === 0 && (
-                  <span className="text-[10px] text-gray-400 w-full text-center py-2">No categories found</span>
-                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Pet Type Filter */}
+          <div className="relative group flex-shrink-0">
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all",
+              selectedPetType ? "bg-indigo-600 text-white" : "bg-white border border-black/5 text-gray-600"
+            )}>
+              <Dog className="h-3 w-3" />
+              {selectedPetType || 'Pet Type'}
+            </button>
+            <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-3">
+              <div className="flex flex-wrap gap-1.5">
+                {PET_TYPES.map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedPetType(selectedPetType === type ? null : type)}
+                    className={cn(
+                      "px-2 py-1 rounded-md border text-[10px] font-medium transition-all",
+                      selectedPetType === type 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-600" 
+                        : "bg-white border-black/5 text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* City Filter */}
+          <div className="relative group flex-shrink-0">
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all",
+              selectedCity ? "bg-indigo-600 text-white" : "bg-white border border-black/5 text-gray-600"
+            )}>
+              <MapPin className="h-3 w-3" />
+              {selectedCity || 'City'}
+            </button>
+            <div className="absolute left-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-3">
+              <div className="flex flex-wrap gap-1.5">
+                {CITIES.map(city => (
+                  <button
+                    key={city}
+                    onClick={() => setSelectedCity(selectedCity === city ? null : city)}
+                    className={cn(
+                      "px-2 py-1 rounded-md border text-[10px] font-medium transition-all",
+                      selectedCity === city 
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-600" 
+                        : "bg-white border-black/5 text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Rating Filter */}
+          <div className="relative group flex-shrink-0">
+            <button className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all",
+              minRating > 0 ? "bg-indigo-600 text-white" : "bg-white border border-black/5 text-gray-600"
+            )}>
+              <Star className="h-3 w-3" />
+              {minRating > 0 ? `${minRating}+ Stars` : 'Rating'}
+            </button>
+            <div className="absolute left-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-3">
+              <div className="flex flex-col gap-1">
+                {[4.5, 4.0, 3.5, 3.0].map(rating => (
+                  <button
+                    key={rating}
+                    onClick={() => setMinRating(minRating === rating ? 0 : rating)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-[10px] font-medium transition-all",
+                      minRating === rating 
+                        ? "bg-indigo-50 text-indigo-600" 
+                        : "hover:bg-gray-50 text-gray-600"
+                    )}
+                  >
+                    {rating}+ Stars
+                  </button>
+                ))}
               </div>
             </div>
           </div>
           
           <div className="h-4 w-[1px] bg-gray-200 flex-shrink-0" />
 
-          {SERVICE_CATEGORIES.slice(0, 3).map(category => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg border text-xs font-medium whitespace-nowrap transition-all",
-                selectedCategory === category 
-                  ? "bg-indigo-50 border-indigo-200 text-indigo-600" 
-                  : "bg-white border-black/5 text-gray-600"
-              )}
-            >
-              {category}
-            </button>
-          ))}
-
-          <div className="h-4 w-[1px] bg-gray-200 flex-shrink-0" />
-
           <button
             onClick={() => {
-              if (maxDistance) {
-                setMaxDistance(null);
+              if (sortBy === 'Distance') {
+                setSortBy('Top Rated');
               } else {
                 if (locationStatus === 'denied') {
-                  // Re-request or show message
                   requestLocation();
                 } else if (!userLocation) {
                   requestLocation();
-                  setMaxDistance(5);
+                  setSortBy('Distance');
                 } else {
-                  setMaxDistance(5);
+                  setSortBy('Distance');
                 }
               }
             }}
             className={cn(
               "px-3 py-1.5 rounded-lg border text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5",
-              maxDistance === 5
+              sortBy === 'Distance'
                 ? "bg-indigo-50 border-indigo-200 text-indigo-600"
                 : "bg-white border-black/5 text-gray-600"
             )}
@@ -298,18 +319,19 @@ export const ExploreScreen: React.FC = () => {
                 className="h-3 w-3 border-2 border-indigo-600 border-t-transparent rounded-full"
               />
             )}
-            Nearby (&lt; 5km)
+            Nearby
           </button>
 
           <div className="h-4 w-[1px] bg-gray-200 flex-shrink-0" />
 
-          {(selectedCategory || minPrice > 0 || maxPrice < 5000 || maxDistance) && (
+          {(selectedCategory || selectedPetType || selectedCity || minRating > 0 || sortBy === 'Distance') && (
             <button
               onClick={() => {
                 setSelectedCategory(null);
-                setMinPrice(0);
-                setMaxPrice(5000);
-                setMaxDistance(null);
+                setSelectedPetType(null);
+                setSelectedCity(null);
+                setMinRating(0);
+                setSortBy('Top Rated');
               }}
               className="px-3 py-1.5 rounded-lg bg-red-50 border border-red-100 text-red-600 text-xs font-bold whitespace-nowrap hover:bg-red-100 transition-colors"
             >
@@ -317,64 +339,15 @@ export const ExploreScreen: React.FC = () => {
             </button>
           )}
 
-          <div className="relative group flex-shrink-0">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-black/5 text-gray-600 text-xs font-medium whitespace-nowrap hover:bg-gray-50 transition-colors">
-              Price: ₹{minPrice} - ₹{maxPrice === 5000 ? '5000+' : maxPrice}
-              <ChevronDown className="h-3 w-3" />
-            </button>
-            <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">
-                    Min Price: ₹{minPrice}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    step="100"
-                    value={minPrice}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setMinPrice(Math.min(val, maxPrice));
-                    }}
-                    className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">
-                    Max Price: ₹{maxPrice === 5000 ? 'Any' : maxPrice}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    step="100"
-                    value={maxPrice}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setMaxPrice(Math.max(val, minPrice));
-                    }}
-                    className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between mt-2 text-[8px] text-gray-400 font-bold">
-                <span>₹0</span>
-                <span>₹5000+</span>
-              </div>
-            </div>
-          </div>
-
           <div className="h-4 w-[1px] bg-gray-200 flex-shrink-0" />
 
           <div className="relative group">
             <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-black/5 text-gray-600 text-xs font-medium whitespace-nowrap hover:bg-gray-50 transition-colors">
-              {sortBy}
+              Sort: {sortBy}
               <ChevronDown className="h-3 w-3" />
             </button>
             <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-              {(['Top Rated', 'Most Booked', 'Price: Low to High', 'Distance'] as const).map(option => (
+              {(['Top Rated', 'Most Booked', 'Distance', 'Newest'] as const).map(option => (
                 <button
                   key={option}
                   onClick={() => setSortBy(option)}
@@ -391,10 +364,10 @@ export const ExploreScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Results List */}
+        {/* Results List */}
       <div className="p-2">
         <AnimatePresence>
-          {locationStatus === 'denied' && maxDistance === 5 && (
+          {locationStatus === 'denied' && sortBy === 'Distance' && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
@@ -431,7 +404,7 @@ export const ExploreScreen: React.FC = () => {
             ))}
           </div>
         ) : error ? (
-          <ErrorMessage message={error} onRetry={refresh} />
+          <ErrorMessage message={error} onRetry={fetchResults} />
         ) : (
           <FlatList
             data={visibleServices}
@@ -445,7 +418,7 @@ export const ExploreScreen: React.FC = () => {
             ListHeaderComponent={
               <div className="flex items-center justify-between p-2 mb-2">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  {filteredServices.length} Results Found
+                  {totalResults} Results Found
                 </span>
               </div>
             }
@@ -460,7 +433,7 @@ export const ExploreScreen: React.FC = () => {
             ListFooterComponent={
               visibleServices.length > 0 && (
                 <div className="py-8 flex flex-col items-center gap-3">
-                  {visibleCount < filteredServices.length ? (
+                  {visibleCount < services.length ? (
                     <LoadingSpinner />
                   ) : (
                     <>

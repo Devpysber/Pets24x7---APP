@@ -1,33 +1,19 @@
 import { User } from '../types';
-import { mockUser } from './mockData';
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+import axiosInstance from './axiosInstance';
 
 export const userApi = {
-  login: async (email: string, pass: string): Promise<User> => {
-    await delay(1000);
-    // In a real app, this would be:
-    // const response = await axiosInstance.post('/auth/login', { email, pass });
-    // return response.data;
-    if (email === mockUser.email) {
-      return { ...mockUser };
-    }
-    throw new Error('Invalid credentials');
+  login: async (email: string, password: string): Promise<{ user: User; token: string }> => {
+    const response = await axiosInstance.post('/auth/login', { email, password });
+    return response.data;
   },
 
   getProfile: async (): Promise<User> => {
-    await delay(500);
-    // In a real app, this would be:
-    // const response = await axiosInstance.get('/user/profile');
-    // return response.data;
-    return { ...mockUser };
+    const response = await axiosInstance.get('/auth/profile');
+    return response.data;
   },
 
   updateProfile: async (user: Partial<User>): Promise<User> => {
-    await delay(800);
-    // In a real app, this would be:
-    // const response = await axiosInstance.put('/user/profile', user);
-    // return response.data;
-    return { ...mockUser, ...user };
+    const response = await axiosInstance.put('/user/profile', user);
+    return response.data;
   }
 };

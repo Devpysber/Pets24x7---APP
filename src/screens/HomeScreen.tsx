@@ -70,26 +70,34 @@ export const HomeScreen: React.FC = () => {
     <div className="flex flex-col gap-6 pb-8">
       {/* Search Bar */}
       <div className="px-4 pt-4">
-        <div className="relative">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            const query = (e.currentTarget.elements.namedItem('search') as HTMLInputElement).value;
+            navigate(`/explore?search=${encodeURIComponent(query)}`);
+          }}
+          className="relative"
+        >
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
+            name="search"
             type="text"
             placeholder="Search for vets, groomers, shops..."
             className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
           />
-        </div>
+        </form>
       </div>
 
       {/* Reminder Prompt for Vendors */}
       <AnimatePresence>
-        {showReminder && userRole === 'vendor' && subscription.plan === 'free' && (
+        {showReminder && userRole === 'vendor' && subscription.plan === 'FREE' && (
           <ReminderPrompt 
             type="upgrade" 
             onClose={() => setShowReminder(false)}
             onAction={() => navigate('/subscription')}
           />
         )}
-        {showReminder && userRole === 'vendor' && subscription.plan === 'premium' && (
+        {showReminder && userRole === 'vendor' && subscription.plan !== 'FREE' && (
           <ReminderPrompt 
             type="profile" 
             onClose={() => setShowReminder(false)}
@@ -107,7 +115,11 @@ export const HomeScreen: React.FC = () => {
         />
         <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
           {CATEGORIES.map((cat) => (
-            <button key={cat.id} className="flex flex-col items-center gap-2 min-w-[70px]">
+            <button 
+              key={cat.id} 
+              onClick={() => navigate(`/explore?category=${encodeURIComponent(cat.name)}`)}
+              className="flex flex-col items-center gap-2 min-w-[70px]"
+            >
               <div className={`h-14 w-14 rounded-2xl ${cat.color} flex items-center justify-center shadow-sm border border-black/5`}>
                 <cat.icon className="h-6 w-6" />
               </div>

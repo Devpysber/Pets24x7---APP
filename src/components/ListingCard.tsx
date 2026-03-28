@@ -144,6 +144,7 @@ export const ListingCard: React.FC<ListingCardProps> = memo(({ service, viewType
 
         <ActionButtons 
           serviceId={service.id}
+          vendorId={service.vendorId}
           serviceName={service.name}
           serviceImage={service.image}
           phone={service.phone} 

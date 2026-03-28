@@ -1,17 +1,277 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
+// --- Enums ---
+
+enum Role {
+  USER
+  VENDOR
+  ADMIN
+}
+
+enum Category {
+  PET_SHOP
+  VET_CLINIC
+  GROOMING
+  TRAINER
+  PET_HOTEL
+  DAYCARE
+  BOARDING
+  WALKING
+  EVENTS
+}
+
+enum LeadActionType {
+  CALL
+  WHATSAPP
+  INQUIRY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+enum SubscriptionPlan {
+  FREE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum PostType {
+  LOST
+  FOUND
+}
+
+enum CommunityCategory {
+  TIPS
+  ADOPTION
+  STORIES
+  GENERAL
+}
+
+// --- Models ---
+
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String?   // For real auth
+  avatar        String?
+  role          Role      @default(USER)
+  isVerified    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  vendorProfile  Vendor?
+  leads          Lead[]          @relation("UserLeads")
+  lostFoundPosts LostFoundPost[]
+  communityPosts CommunityPost[]
+  comments       Comment[]
+  likes          Like[]
+  reviews        Review[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Vendor {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName String
+  description  String?
+  city         String
+  address      String?
+  website      String?
+  isVerified   Boolean  @default(false)
+  isPremium    Boolean  @default(false)
+  leadCredits  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  listings      Listing[]
+  leadsReceived Lead[]         @relation("VendorLeads")
+  subscriptions Subscription[]
+
+  @@index([city])
+  @@index([businessName])
+  @@index([isPremium])
+}
+
+model Listing {
+  id           String   @id @default(cuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  category     Category
+  city         String   // Denormalized for high-performance filtering
+  petTypes     String   // Store as JSON string: e.g., '["Dogs", "Cats"]'
+  tags         String   // Store as JSON string
+  location     String   // Display location
+  address      String?
+  latitude     Float?
+  longitude    Float?
+  rating       Float    @default(0)
+  totalReviews Int      @default(0)
+  isPremium    Boolean  @default(false)
+  isVerified   Boolean  @default(false) // Denormalized from Vendor
+  images       String   // Store as JSON string
+  priceRange   String?  // e.g., "$$" or "100-500"
+  operatingHours String? // Store as JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  leads   Lead[]
+  reviews Review[]
+
+  // Indexes for high-performance search and filtering
+  @@index([category, city])
+  @@index([isPremium, rating(sort: Desc)])
+  @@index([location])
+  @@index([petTypes])
+  @@index([isVerified])
+}
+
+model Lead {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation("UserLeads", fields: [userId], references: [id])
+  vendorId   String
+  vendor     Vendor         @relation("VendorLeads", fields: [vendorId], references: [id])
+  listingId  String?
+  listing    Listing?       @relation(fields: [listingId], references: [id])
+  actionType LeadActionType
+  message    String?
+  status     LeadStatus     @default(NEW)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([vendorId, status])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id        String           @id @default(cuid())
+  vendorId  String
+  vendor    Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  plan      SubscriptionPlan @default(FREE)
+  isActive  Boolean          @default(true)
+  startDate DateTime         @default(now())
+  endDate   DateTime?
+
+  @@index([vendorId, isActive])
+}
+
+model LostFoundPost {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        PostType
+  petCategory String   // Dog, Cat, etc.
+  petType     String   // Breed or specific type
+  description String?
+  location    String
+  latitude    Float?
+  longitude   Float?
+  image       String?
+  contactInfo String
+  isResolved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([type, petCategory])
+  @@index([location])
+}
+
+model CommunityPost {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  CommunityCategory @default(GENERAL)
+  content   String
+  image     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relations
+  comments Comment[]
+  likes    Like[]
+
+  @@index([userId])
+  @@index([category])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId]) // One like per user per post
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  image     String
+  link      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // lead, reminder, lost_found, etc.
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      @default(5)
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, userId]) // One review per user per listing
+  @@index([listingId, rating])
 }

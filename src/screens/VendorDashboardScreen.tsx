@@ -39,15 +39,25 @@ import { LeadCard } from '../components/LeadCard';
 import { Badge } from '../components/Badge';
 import { DataTable } from '../components/DataTable';
 import { FlatList } from '../components/FlatList';
+import { SubscriptionModal } from '../components/SubscriptionModal';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export default function VendorDashboardScreen() {
-  const { user, services, inquiries, subscription, updateSubscription, cancelSubscription, addService, updateService, deleteService, updateInquiryStatus, leadCredits } = useAppStore();
+  const { user, services, inquiries, subscription, updateSubscription, cancelSubscription, addService, updateService, deleteService, updateInquiryStatus, leadCredits, fetchVendorStats } = useAppStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'listings' | 'leads' | 'subscription'>('overview');
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  
+  React.useEffect(() => {
+    if (user?.id) {
+      // In a real app, we'd use the vendor ID associated with the user
+      // For now, we use 'v1' as a mock vendor ID
+      fetchVendorStats('v1');
+    }
+  }, [user?.id, fetchVendorStats]);
   const [editingService, setEditingService] = useState<PetService | null>(null);
   const [isAddingService, setIsAddingService] = useState(false);
   const [newService, setNewService] = useState<Partial<PetService>>({
@@ -228,21 +238,21 @@ export default function VendorDashboardScreen() {
                     <div className="text-indigo-100 text-xs font-medium uppercase tracking-wider mb-1">Current Plan</div>
                     <div className="text-2xl font-bold capitalize flex items-center gap-2">
                       {subscription.plan} Plan
-                      {subscription.plan === 'premium' && <Crown className="w-5 h-5 text-amber-300 fill-amber-300" />}
+                      {subscription.plan !== 'FREE' && <Crown className="w-5 h-5 text-amber-300 fill-amber-300" />}
                     </div>
                   </div>
                   <CreditCard className="w-8 h-8 text-indigo-200 opacity-50" />
                 </div>
                 <p className="text-indigo-50 text-sm mb-6 max-w-[200px]">
-                  {subscription.plan === 'premium' 
+                  {subscription.plan !== 'FREE' 
                     ? 'You are enjoying all premium benefits. Your visibility is boosted!'
-                    : 'Upgrade to Premium to get 5x more leads and featured placement.'}
+                    : 'Upgrade to a Premium plan to get more leads and priority placement.'}
                 </p>
                 <button 
-                  onClick={() => setActiveTab('subscription')}
+                  onClick={() => setIsSubscriptionModalOpen(true)}
                   className="w-full bg-white text-indigo-700 font-bold py-3 rounded-xl shadow-sm hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  {subscription.plan === 'premium' ? 'View Plan Details' : 'Upgrade to Premium'}
+                  {subscription.plan !== 'FREE' ? 'Manage Subscription' : 'Upgrade Now'}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -432,26 +442,28 @@ export default function VendorDashboardScreen() {
                   <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Current Active Plan</div>
                   <div className="text-2xl font-bold text-slate-900 capitalize flex items-center gap-2">
                     {subscription.plan}
-                    {subscription.plan === 'premium' && <Crown className="w-6 h-6 text-amber-500 fill-amber-500" />}
+                    {subscription.plan !== 'FREE' && <Crown className="w-6 h-6 text-amber-500 fill-amber-500" />}
                   </div>
                 </div>
                 <div className={cn(
                   "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                  subscription.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                  subscription.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
                 )}>
-                  {subscription.status === 'none' ? 'Inactive' : subscription.status}
+                  {subscription.isActive ? 'Active' : 'Inactive'}
                 </div>
               </div>
 
-              {subscription.plan === 'premium' && (
+              {subscription.plan !== 'FREE' && (
                 <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 mb-6">
                   <div className="flex items-center space-x-3 mb-3">
                     <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white">
                       <Check className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-indigo-900">Premium Active</h3>
-                      <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Renewing on {new Date(subscription.expiryDate!).toLocaleDateString()}</p>
+                      <h3 className="font-bold text-indigo-900">{subscription.plan} Active</h3>
+                      {subscription.expiryDate && (
+                        <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider">Renewing on {new Date(subscription.expiryDate).toLocaleDateString()}</p>
+                      )}
                     </div>
                   </div>
                   <p className="text-sm text-indigo-700 leading-relaxed mb-4">
@@ -471,69 +483,17 @@ export default function VendorDashboardScreen() {
                 </div>
               )}
 
-              {/* Comparison Table */}
               <div className="space-y-4">
-                <h3 className="font-bold text-slate-900">Plan Comparison</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className={cn(
-                    "p-5 rounded-3xl border-2 transition-all",
-                    subscription.plan === 'free' ? "border-indigo-600 bg-indigo-50/30" : "border-slate-100 bg-white"
-                  )}>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-bold text-slate-900">Free Starter</h4>
-                      <div className="text-lg font-bold text-slate-900">₹0<span className="text-xs text-slate-400 font-normal">/mo</span></div>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      {['Basic Listing', 'Limited Leads', 'Standard Support'].map((f, i) => (
-                        <li key={i} className="flex items-center text-xs text-slate-600">
-                          <Check className="w-4 h-4 mr-2 text-slate-400" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {subscription.plan !== 'free' && (
-                      <Button variant="outline" className="w-full rounded-xl border-slate-200 text-slate-600">Downgrade</Button>
-                    )}
-                  </div>
-
-                  <div className={cn(
-                    "p-5 rounded-3xl border-2 transition-all relative overflow-hidden",
-                    subscription.plan === 'premium' ? "border-indigo-600 bg-indigo-50/30" : "border-amber-200 bg-amber-50/30"
-                  )}>
-                    <div className="absolute top-0 right-0 bg-amber-500 text-white text-[9px] font-bold uppercase px-3 py-1 rounded-bl-xl">Recommended</div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                        Premium Pro
-                        <Crown className="w-4 h-4 text-amber-500 fill-amber-500" />
-                      </h4>
-                      <div className="text-lg font-bold text-slate-900">₹999<span className="text-xs text-slate-400 font-normal">/mo</span></div>
-                    </div>
-                    <ul className="space-y-3 mb-6">
-                      {[
-                        'Top Search Placement',
-                        'Verified Business Badge',
-                        'Unlimited Leads',
-                        'Featured on Homepage',
-                        'Priority Support 24/7'
-                      ].map((f, i) => (
-                        <li key={i} className="flex items-center text-xs text-slate-900 font-medium">
-                          <Check className="w-4 h-4 mr-2 text-indigo-600" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {subscription.plan !== 'premium' ? (
-                      <Button 
-                        onClick={() => updateSubscription('premium')}
-                        className="w-full rounded-xl bg-indigo-600 shadow-lg shadow-indigo-100"
-                      >
-                        Upgrade Now
-                      </Button>
-                    ) : (
-                      <div className="text-center text-xs font-bold text-indigo-600 uppercase tracking-wider">Current Active Plan</div>
-                    )}
-                  </div>
-                </div>
+                <h3 className="font-bold text-slate-900">Manage Subscription</h3>
+                <p className="text-sm text-slate-500">
+                  Upgrade your plan to get more visibility, lead credits, and premium features.
+                </p>
+                <Button 
+                  onClick={() => setIsSubscriptionModalOpen(true)}
+                  className="w-full rounded-xl bg-indigo-600 shadow-lg shadow-indigo-100"
+                >
+                  {subscription.plan === 'FREE' ? 'Upgrade Plan' : 'Change Plan'}
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -695,14 +655,18 @@ export default function VendorDashboardScreen() {
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 ml-1">Category</label>
                     <select 
                       value={newService.category}
-                      onChange={(e) => setNewService({ ...newService, category: e.target.value })}
+                      onChange={(e) => setNewService({ ...newService, category: e.target.value as any })}
                       className="w-full px-4 py-3 rounded-2xl border border-black/5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
                     >
                       <option value="Grooming">Grooming</option>
                       <option value="Daycare">Daycare</option>
-                      <option value="Vet">Vet</option>
-                      <option value="Training">Training</option>
+                      <option value="Vet Clinics">Vet Clinics</option>
+                      <option value="Trainers">Trainers</option>
                       <option value="Boarding">Boarding</option>
+                      <option value="Pet Shops">Pet Shops</option>
+                      <option value="Pet Hotels">Pet Hotels</option>
+                      <option value="Events">Events</option>
+                      <option value="Walking">Walking</option>
                     </select>
                   </div>
 
@@ -785,6 +749,11 @@ export default function VendorDashboardScreen() {
           </div>
         )}
       </AnimatePresence>
+
+      <SubscriptionModal 
+        isOpen={isSubscriptionModalOpen} 
+        onClose={() => setIsSubscriptionModalOpen(false)} 
+      />
 
       <LeadPurchaseModal 
         isOpen={isLeadModalOpen} 

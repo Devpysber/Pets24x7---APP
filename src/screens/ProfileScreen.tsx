@@ -29,13 +29,22 @@ import { Link } from 'react-router-dom';
 type ProfileTab = 'saved' | 'inquiries' | 'posts';
 
 export const ProfileScreen: React.FC = () => {
-  const { user, services, favorites, inquiries, lostFoundPosts, userRole } = useAppStore();
+  const { user, services, favorites, inquiries, lostFoundPosts, userRole, isLoading } = useAppStore();
   const { logout, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('saved');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const savedServices = services.filter(s => favorites.includes(s.id));
   const myPosts = lostFoundPosts.filter(p => p.userName === user?.name || p.userName === 'You');
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p className="mt-4 text-sm text-gray-500 font-medium">Loading your profile...</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -218,7 +227,7 @@ export const ProfileScreen: React.FC = () => {
                             <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Inquiry</span>
                           </div>
                         </div>
-                        <Badge variant="success" className="text-[9px] px-2 py-0.5 rounded-full">Sent</Badge>
+                        <Badge variant="secondary" className="text-[9px] px-2 py-0.5 rounded-full">Sent</Badge>
                       </div>
                       <div className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100/50">
                         <p className="text-xs text-gray-600 leading-relaxed italic">
