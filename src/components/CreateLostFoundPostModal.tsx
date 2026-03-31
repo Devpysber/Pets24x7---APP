@@ -21,29 +21,38 @@ export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> =
   const [contactInfo, setContactInfo] = useState('');
   const [image, setImage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addLostFoundPost({
-      type,
-      petCategory,
-      petName,
-      breed,
-      petType: breed, // Keep for compatibility
-      description,
-      location,
-      contactInfo,
-      image: image || `https://picsum.photos/seed/${Math.random()}/600/600`,
-    });
-    onClose();
-    // Reset form
-    setType('lost');
-    setPetCategory('Dog');
-    setPetName('');
-    setBreed('');
-    setDescription('');
-    setLocation('');
-    setContactInfo('');
-    setImage('');
+    setIsLoading(true);
+    try {
+      await addLostFoundPost({
+        type,
+        petCategory,
+        petName,
+        breed,
+        petType: breed, // Keep for compatibility
+        description,
+        location,
+        contactInfo,
+        image: image || `https://picsum.photos/seed/${Math.random()}/600/600`,
+      });
+      onClose();
+      // Reset form
+      setType('lost');
+      setPetCategory('Dog');
+      setPetName('');
+      setBreed('');
+      setDescription('');
+      setLocation('');
+      setContactInfo('');
+      setImage('');
+    } catch (error) {
+      console.error('Failed to create lost/found post:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -192,9 +201,10 @@ export const CreateLostFoundPostModal: React.FC<CreateLostFoundPostModalProps> =
 
               <Button
                 type="submit"
+                disabled={isLoading}
                 className="w-full py-4 rounded-2xl text-base font-bold shadow-lg shadow-indigo-200"
               >
-                Post Now
+                {isLoading ? 'Posting...' : 'Post Now'}
               </Button>
             </form>
           </motion.div>

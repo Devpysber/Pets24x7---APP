@@ -10,8 +10,8 @@
     "dev": "tsx server.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
-    "build:server": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.cjs --format=cjs --external:vite --external:@prisma/client --external:express --external:helmet --external:compression --external:morgan --external:dotenv --external:bcryptjs --external:jsonwebtoken --external:path --external:url",
-    "start": "NODE_ENV=production node dist/server.cjs",
+    "build:server": "esbuild server.ts --bundle --platform=node --target=node20 --outfile=dist/server.js --format=esm --external:vite --external:@prisma/client --external:express --external:helmet --external:compression --external:morgan --external:dotenv --external:bcryptjs --external:jsonwebtoken --external:path --external:url",
+    "start": "NODE_ENV=production node dist/server.js",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "postinstall": "prisma generate"

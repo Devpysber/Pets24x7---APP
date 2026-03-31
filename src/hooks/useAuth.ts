@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { UserRole } from '../types';
+import { UserRole, User } from '../types';
 import { userApi } from '../api/user.api';
 
 export const useAuth = () => {
@@ -29,6 +29,38 @@ export const useAuth = () => {
     }
   }, [setUser, setUserRole]);
 
+  const register = useCallback(async (name: string, email: string, pass: string, role: string = 'user', phone?: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { user: userData, token } = await userApi.register({ name, email, password: pass, role, phone });
+      localStorage.setItem('auth_token', token);
+      setUser(userData);
+      setUserRole(userData.role);
+      return userData;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setUser, setUserRole]);
+
+  const updateProfile = useCallback(async (data: Partial<User>) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedUser = await userApi.updateProfile(data);
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update profile.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setUser]);
+
   const switchRole = useCallback((role: UserRole) => {
     setUserRole(role);
   }, [setUserRole]);
@@ -48,6 +80,8 @@ export const useAuth = () => {
     isLoading,
     error,
     login,
+    register,
+    updateProfile,
     switchRole,
     logout,
   };

@@ -35,11 +35,13 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/theme';
 
+import { leadsApi } from '../api/leads.api';
+
 export const ServiceDetailsScreen: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getServiceById, services, toggleFavorite, isFavorite: checkFavorite, isLoading, error, refresh } = useServices();
-  const { openInquiryModal } = useAppStore();
+  const { openInquiryModal, user } = useAppStore();
   
   const service = getServiceById(id || '');
   const isFavorite = checkFavorite(id || '');
@@ -109,14 +111,40 @@ export const ServiceDetailsScreen: React.FC = () => {
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const handleCall = () => {
+  const handleCall = async () => {
     if (!service) return;
+    
+    // Create lead in background
+    try {
+      await leadsApi.createLead({
+        vendorId: service.vendorId,
+        listingId: service.id,
+        actionType: 'CALL',
+        message: `User clicked Call for ${service.name}`
+      });
+    } catch (err) {
+      console.error('Failed to create call lead:', err);
+    }
+
     openInquiryModal({ id: service.id, vendorId: service.vendorId, name: service.name, initialType: 'Call Request' });
     window.location.href = `tel:${service.phone}`;
   };
 
-  const handleWhatsAppClick = () => {
+  const handleWhatsAppClick = async () => {
     if (!service) return;
+
+    // Create lead in background
+    try {
+      await leadsApi.createLead({
+        vendorId: service.vendorId,
+        listingId: service.id,
+        actionType: 'WHATSAPP',
+        message: `User clicked WhatsApp for ${service.name}`
+      });
+    } catch (err) {
+      console.error('Failed to create WhatsApp lead:', err);
+    }
+
     window.open(`https://wa.me/${service.whatsapp.replace(/\D/g, '')}`, '_blank');
   };
 

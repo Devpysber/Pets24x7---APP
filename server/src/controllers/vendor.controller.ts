@@ -1,9 +1,18 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 
-export const getVendorStats = async (req: Request, res: Response) => {
+export const getVendorStats = async (req: any, res: Response) => {
   try {
     const { vendorId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole === 'VENDOR') {
+      const userVendor = await prisma.vendor.findUnique({ where: { userId } });
+      if (!userVendor || userVendor.id !== vendorId) {
+        return res.status(403).json({ error: 'Forbidden: You can only access your own stats' });
+      }
+    }
     
     const [totalLeads, newLeads, totalListings, vendor] = await Promise.all([
       prisma.lead.count({ where: { vendorId } }),
@@ -38,9 +47,18 @@ export const getVendorStats = async (req: Request, res: Response) => {
   }
 };
 
-export const getVendorDashboard = async (req: Request, res: Response) => {
+export const getVendorDashboard = async (req: any, res: Response) => {
   try {
     const { vendorId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole === 'VENDOR') {
+      const userVendor = await prisma.vendor.findUnique({ where: { userId } });
+      if (!userVendor || userVendor.id !== vendorId) {
+        return res.status(403).json({ error: 'Forbidden: You can only access your own dashboard' });
+      }
+    }
     
     const [totalLeads, newLeads, totalListings, vendor, recentLeads] = await Promise.all([
       prisma.lead.count({ where: { vendorId } }),
@@ -99,9 +117,19 @@ export const getVendorDashboard = async (req: Request, res: Response) => {
   }
 };
 
-export const updateVendorProfile = async (req: Request, res: Response) => {
+export const updateVendorProfile = async (req: any, res: Response) => {
   try {
     const { vendorId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole === 'VENDOR') {
+      const userVendor = await prisma.vendor.findUnique({ where: { userId } });
+      if (!userVendor || userVendor.id !== vendorId) {
+        return res.status(403).json({ error: 'Forbidden: You can only update your own profile' });
+      }
+    }
+
     const { businessName, description, city, address, phone, website } = req.body;
 
     const vendor = await prisma.vendor.update({
@@ -130,9 +158,19 @@ export const updateVendorProfile = async (req: Request, res: Response) => {
   }
 };
 
-export const getVendorLeads = async (req: Request, res: Response) => {
+export const getVendorLeads = async (req: any, res: Response) => {
   try {
     const { vendorId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole === 'VENDOR') {
+      const userVendor = await prisma.vendor.findUnique({ where: { userId } });
+      if (!userVendor || userVendor.id !== vendorId) {
+        return res.status(403).json({ error: 'Forbidden: You can only access your own leads' });
+      }
+    }
+
     const leads = await prisma.lead.findMany({
       where: { vendorId },
       include: {

@@ -5,9 +5,25 @@ export type UserRole = 'user' | 'vendor' | 'admin';
 export interface User {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string;
   email: string;
+  phone?: string;
   role: UserRole;
+  vendorProfile?: Vendor;
+}
+
+export interface Vendor {
+  id: string;
+  userId: string;
+  businessName: string;
+  description?: string;
+  city: string;
+  address?: string;
+  website?: string;
+  isVerified: boolean;
+  isPremium: boolean;
+  leadCredits: number;
+  createdAt: string;
 }
 
 export type InquiryType = 'call' | 'whatsapp' | 'inquiry';

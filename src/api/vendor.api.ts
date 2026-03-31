@@ -8,5 +8,9 @@ export const vendorApi = {
   getLeads: async (vendorId: string) => {
     const response = await axiosInstance.get(`/vendor/${vendorId}/leads`);
     return response.data.leads;
+  },
+  updateProfile: async (vendorId: string, data: any) => {
+    const response = await axiosInstance.put(`/vendor/${vendorId}/profile`, data);
+    return response.data;
   }
 };

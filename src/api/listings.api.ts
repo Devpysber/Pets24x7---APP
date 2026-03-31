@@ -2,7 +2,7 @@ import { PetService } from '../types';
 import axiosInstance from './axiosInstance';
 
 export const listingsApi = {
-  getListings: async (params?: any): Promise<{ data: PetService[], meta: any }> => {
+  getListings: async (params?: any): Promise<{ listings: PetService[], total: number }> => {
     const response = await axiosInstance.get('/listings', { params });
     return response.data;
   },

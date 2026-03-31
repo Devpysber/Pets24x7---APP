@@ -14,17 +14,26 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
+const CATEGORY_MAP: Record<string, string> = {
+  'Pet Shops': 'PET_SHOP',
+  'Vet Clinics': 'VET_CLINIC',
+  'Grooming': 'GROOMING',
+  'Trainers': 'TRAINER',
+  'Pet Hotels': 'PET_HOTEL',
+  'Daycare': 'DAYCARE',
+  'Boarding': 'BOARDING',
+  'Walking': 'WALKING',
+  'Events': 'EVENTS',
+};
+
 export const getListings = async (req: Request, res: Response) => {
   try {
     const { 
       category, 
       city, 
-      isPremium, 
       search, 
-      petType, 
-      minRating, 
-      lat, 
-      lng, 
+      petType,
+      rating,
       sortBy,
       page = '1',
       limit = '20'
@@ -38,34 +47,23 @@ export const getListings = async (req: Request, res: Response) => {
     
     // Category filter
     if (category) {
-      const categoryMap: Record<string, any> = {
-        'Pet Shops': 'PET_SHOP',
-        'Vet Clinics': 'VET_CLINIC',
-        'Grooming': 'GROOMING',
-        'Trainers': 'TRAINER',
-        'Pet Hotels': 'PET_HOTEL',
-        'Daycare': 'DAYCARE',
-        'Events': 'EVENTS',
-        'Boarding': 'BOARDING',
-        'Walking': 'WALKING'
-      };
-      where.category = categoryMap[category as string] || category;
+      const mappedCategory = CATEGORY_MAP[category as string] || category;
+      where.category = mappedCategory as any;
     }
 
     // City filter
-    if (city) where.city = { equals: city as string };
-
-    // Premium filter
-    if (isPremium === 'true') where.isPremium = true;
-
-    // Rating filter
-    if (minRating) {
-      where.rating = { gte: parseFloat(minRating as string) };
+    if (city) {
+      where.city = { equals: city as string };
     }
 
     // Pet Type filter
     if (petType) {
       where.petTypes = { contains: petType as string };
+    }
+
+    // Rating filter
+    if (rating) {
+      where.rating = { gte: parseFloat(rating as string) };
     }
 
     // Search filter
@@ -77,117 +75,71 @@ export const getListings = async (req: Request, res: Response) => {
       ];
     }
 
-    // Default sorting: Premium first, then rating
-    let orderBy: any[] = [
+    // Sorting
+    // Always prioritize premium listings
+    let orderBy: any = [
       { isPremium: 'desc' },
     ];
 
-    if (sortBy === 'rating' || sortBy === 'Top Rated') {
+    if (sortBy === 'rating') {
       orderBy.push({ rating: 'desc' });
-    } else if (sortBy === 'newest' || sortBy === 'Newest') {
+    } else if (sortBy === 'newest') {
       orderBy.push({ createdAt: 'desc' });
-    } else if (sortBy === 'Most Booked') {
+    } else if (sortBy === 'popularity') {
       orderBy.push({ totalReviews: 'desc' });
     } else {
-      orderBy.push({ rating: 'desc' });
+      orderBy.push({ rating: 'desc' }); // Default secondary sort
     }
 
     const [listings, total] = await Promise.all([
       prisma.listing.findMany({
         where,
-        include: {
-          vendor: {
-            include: {
-              user: {
-                select: {
-                  phone: true,
-                  email: true,
-                }
-              },
-            },
-          },
-        },
         orderBy,
         skip,
         take: limitNum,
+        include: {
+          vendor: {
+            select: {
+              businessName: true,
+              isVerified: true
+            }
+          }
+        }
       }),
       prisma.listing.count({ where })
     ]);
 
-    let formattedListings = listings.map(listing => {
+    const formattedListings = listings.map(listing => {
       let images = [];
-      let petTypes = [];
-      let tags = [];
-      let operatingHours = null;
-
       try {
         images = JSON.parse(listing.images || '[]');
-        petTypes = JSON.parse(listing.petTypes || '[]');
-        tags = JSON.parse(listing.tags || '[]');
-        operatingHours = listing.operatingHours ? JSON.parse(listing.operatingHours) : null;
       } catch (e) {
-        console.error('Error parsing JSON fields for listing:', listing.id);
+        images = [];
       }
       
       return {
         id: listing.id,
-        vendorId: listing.vendorId,
-        vendorName: listing.vendor.businessName,
-        name: listing.title,
         title: listing.title,
         category: listing.category,
-        rating: listing.rating,
-        reviewCount: listing.totalReviews,
-        location: listing.location,
         city: listing.city,
-        coordinates: {
-          lat: listing.latitude,
-          lng: listing.longitude,
-        },
-        image: images[0] || '',
-        gallery: images,
-        price: listing.priceRange,
-        priceRange: listing.priceRange,
+        location: listing.location,
+        price: listing.priceRange || 'N/A',
+        rating: listing.rating,
+        totalReviews: listing.totalReviews,
+        image: images[0] || 'https://picsum.photos/seed/pet/400/300',
         isPremium: listing.isPremium,
         isVerified: listing.isVerified,
-        phone: listing.vendor.user?.phone || '',
-        whatsapp: listing.vendor.user?.phone || '',
-        description: listing.description,
-        petTypes,
-        tags,
-        operatingHours,
-        createdAt: listing.createdAt.toISOString(),
+        vendorName: listing.vendor.businessName
       };
     });
 
-    // Distance sorting if lat/lng provided
-    if (lat && lng) {
-      const userLat = parseFloat(lat as string);
-      const userLng = parseFloat(lng as string);
-      
-      formattedListings = formattedListings.map(l => {
-        if (l.coordinates.lat && l.coordinates.lng) {
-          const distance = calculateDistance(userLat, userLng, l.coordinates.lat, l.coordinates.lng);
-          return { ...l, distance };
-        }
-        return { ...l, distance: 999999 };
-      });
-
-      if (sortBy === 'nearest' || sortBy === 'Distance') {
-        formattedListings.sort((a: any, b: any) => {
-          if (a.isPremium !== b.isPremium) return a.isPremium ? -1 : 1;
-          return (a.distance || 0) - (b.distance || 0);
-        });
-      }
-    }
-
     res.json({ 
-      data: formattedListings,
-      meta: {
+      listings: formattedListings,
+      pagination: {
         total,
         page: pageNum,
-        lastPage: Math.ceil(total / limitNum),
-        limit: limitNum
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -204,7 +156,12 @@ export const getListingById = async (req: Request, res: Response) => {
       include: {
         vendor: {
           include: {
-            user: true,
+            user: {
+              select: {
+                phone: true,
+                email: true
+              }
+            },
           },
         },
       },
@@ -214,79 +171,268 @@ export const getListingById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    const images = JSON.parse(listing.images || '[]');
-    const petTypes = JSON.parse(listing.petTypes || '[]');
-    const tags = JSON.parse(listing.tags || '[]');
-    const operatingHours = listing.operatingHours ? JSON.parse(listing.operatingHours) : undefined;
+    let images = [];
+    let petTypes = [];
+    let tags = [];
+    let operatingHours = null;
 
-    const formattedListing = {
-      ...listing,
-      name: listing.title,
+    try {
+      images = JSON.parse(listing.images || '[]');
+      petTypes = JSON.parse(listing.petTypes || '[]');
+      tags = JSON.parse(listing.tags || '[]');
+      operatingHours = listing.operatingHours ? JSON.parse(listing.operatingHours) : null;
+    } catch (e) {
+      // Fallback
+    }
+
+    res.json({
+      id: listing.id,
+      title: listing.title,
+      description: listing.description,
+      category: listing.category,
+      city: listing.city,
+      location: listing.location,
+      price: listing.priceRange || 'N/A',
+      rating: listing.rating,
+      totalReviews: listing.totalReviews,
       image: images[0] || '',
-      gallery: images,
-      price: listing.priceRange,
-      reviewCount: listing.totalReviews,
+      images: images,
+      isPremium: listing.isPremium,
+      isVerified: listing.isVerified,
       petTypes,
       tags,
       operatingHours,
-      vendorName: listing.vendor.businessName,
-      phone: listing.vendor.user?.phone || '',
-      whatsapp: listing.vendor.user?.phone || '',
-      coordinates: {
-        lat: listing.latitude,
-        lng: listing.longitude,
+      vendor: {
+        id: listing.vendor.id,
+        businessName: listing.vendor.businessName,
+        phone: listing.vendor.user?.phone || '',
+        email: listing.vendor.user?.email || ''
       },
-    };
-
-    res.json(formattedListing);
+      createdAt: listing.createdAt.toISOString()
+    });
   } catch (error) {
     console.error('Fetch listing by id error:', error);
     res.status(500).json({ error: 'Failed to fetch listing' });
   }
 };
 
-export const createListing = async (req: Request, res: Response) => {
+export const createListing = async (req: any, res: Response) => {
   try {
-    const { vendorId, name, category, petTypes, location, city, latitude, longitude, isPremium, image, gallery, tags, price, description, operatingHours } = req.body;
+    const { 
+      title, 
+      category, 
+      description, 
+      price, 
+      location, 
+      address,
+      images, 
+      petTypes, 
+      tags, 
+      operatingHours 
+    } = req.body;
     
-    // Map frontend fields back to backend fields if necessary
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { userId }
+    });
+
+    if (!vendor) {
+      return res.status(403).json({ error: 'Only vendors can create listings' });
+    }
+
+    const mappedCategory = CATEGORY_MAP[category as string] || category;
+
     const listing = await prisma.listing.create({
       data: {
-        vendorId,
-        title: name,
-        category,
+        vendorId: vendor.id,
+        title,
+        category: mappedCategory as any,
         description,
+        priceRange: price,
+        location,
+        address: address || location,
+        city: location.split(',').pop()?.trim() || 'Unknown',
+        images: JSON.stringify(images || []),
         petTypes: JSON.stringify(petTypes || []),
         tags: JSON.stringify(tags || []),
-        images: JSON.stringify(gallery || (image ? [image] : [])),
-        location,
-        city: city || 'Unknown',
-        latitude,
-        longitude,
-        isPremium: isPremium || false,
-        priceRange: price,
-        operatingHours: operatingHours ? JSON.stringify(operatingHours) : undefined,
+        operatingHours: operatingHours ? JSON.stringify(operatingHours) : null,
+        isPremium: vendor.isPremium,
+        isVerified: vendor.isVerified
       },
     });
 
-    const images = JSON.parse(listing.images || '[]');
-    const resPetTypes = JSON.parse(listing.petTypes || '[]');
-    const resTags = JSON.parse(listing.tags || '[]');
-    const resOperatingHours = listing.operatingHours ? JSON.parse(listing.operatingHours) : undefined;
-
     res.status(201).json({
-      ...listing,
-      name: listing.title,
-      image: images[0] || '',
-      gallery: images,
-      price: listing.priceRange,
-      reviewCount: listing.totalReviews,
-      petTypes: resPetTypes,
-      tags: resTags,
-      operatingHours: resOperatingHours,
+      id: listing.id,
+      title: listing.title,
+      status: 'active', // Default to active for now
+      createdAt: listing.createdAt.toISOString()
     });
   } catch (error) {
     console.error('Create listing error:', error);
     res.status(500).json({ error: 'Failed to create listing' });
+  }
+};
+
+export const updateListing = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { userId }
+    });
+
+    if (!vendor) {
+      return res.status(403).json({ error: 'Only vendors can update listings' });
+    }
+
+    const listing = await prisma.listing.findUnique({
+      where: { id }
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (listing.vendorId !== vendor.id) {
+      return res.status(403).json({ error: 'You do not have permission to update this listing' });
+    }
+
+    const { 
+      title, 
+      category, 
+      description, 
+      price, 
+      location, 
+      address,
+      images, 
+      petTypes, 
+      tags, 
+      operatingHours 
+    } = req.body;
+
+    const mappedCategory = category ? (CATEGORY_MAP[category as string] || category) : undefined;
+
+    const updatedListing = await prisma.listing.update({
+      where: { id },
+      data: {
+        title,
+        category: mappedCategory as any,
+        description,
+        priceRange: price,
+        location,
+        address: address || location,
+        city: location?.split(',').pop()?.trim(),
+        images: images ? JSON.stringify(images) : undefined,
+        petTypes: petTypes ? JSON.stringify(petTypes) : undefined,
+        tags: tags ? JSON.stringify(tags) : undefined,
+        operatingHours: operatingHours ? JSON.stringify(operatingHours) : undefined,
+      },
+    });
+
+    res.json({
+      id: updatedListing.id,
+      title: updatedListing.title,
+      updatedAt: updatedListing.updatedAt.toISOString()
+    });
+  } catch (error) {
+    console.error('Update listing error:', error);
+    res.status(500).json({ error: 'Failed to update listing' });
+  }
+};
+
+export const deleteListing = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { userId }
+    });
+
+    if (!vendor) {
+      return res.status(403).json({ error: 'Only vendors can delete listings' });
+    }
+
+    const listing = await prisma.listing.findUnique({
+      where: { id }
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    if (listing.vendorId !== vendor.id) {
+      return res.status(403).json({ error: 'You do not have permission to delete this listing' });
+    }
+
+    await prisma.listing.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Listing deleted successfully' });
+  } catch (error) {
+    console.error('Delete listing error:', error);
+    res.status(500).json({ error: 'Failed to delete listing' });
+  }
+};
+
+export const getVendorListings = async (req: any, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const vendor = await prisma.vendor.findUnique({
+      where: { userId }
+    });
+
+    if (!vendor) {
+      return res.status(403).json({ error: 'Vendor profile not found' });
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: { vendorId: vendor.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedListings = listings.map(listing => {
+      let images = [];
+      try {
+        images = JSON.parse(listing.images || '[]');
+      } catch (e) {
+        images = [];
+      }
+      
+      return {
+        id: listing.id,
+        title: listing.title,
+        category: listing.category,
+        city: listing.city,
+        location: listing.location,
+        price: listing.priceRange || 'N/A',
+        rating: listing.rating,
+        totalReviews: listing.totalReviews,
+        image: images[0] || 'https://picsum.photos/seed/pet/400/300',
+        isPremium: listing.isPremium,
+        isVerified: listing.isVerified,
+      };
+    });
+
+    res.json({ listings: formattedListings });
+  } catch (error) {
+    console.error('Fetch vendor listings error:', error);
+    res.status(500).json({ error: 'Failed to fetch vendor listings' });
   }
 };

@@ -19,12 +19,137 @@ import {
   Phone,
   Calendar,
   LayoutDashboard,
-  ShieldCheck
+  ShieldCheck,
+  Camera,
+  X,
+  Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils/theme';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+
+interface ProfileSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOpen, onClose }) => {
+  const { user } = useAppStore();
+  const { updateProfile, isLoading } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      await updateProfile({ name, phone, avatar });
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl p-8"
+          >
+            <button 
+              onClick={onClose}
+              className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Profile</h2>
+              <p className="text-sm text-gray-500 mt-2">Update your personal information</p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold rounded-xl text-center">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col items-center mb-6">
+                <div className="relative group">
+                  <div className="h-24 w-24 rounded-2xl overflow-hidden border-4 border-indigo-50 bg-gray-100">
+                    <img 
+                      src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`} 
+                      alt="Avatar Preview" 
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const url = prompt('Enter new avatar URL:');
+                      if (url) setAvatar(url);
+                    }}
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-lg border-2 border-white"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  required
+                  type="text"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                />
+              </div>
+
+              <div className="relative">
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  required
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full h-14 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-100 font-bold"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+                {!isLoading && <Save className="ml-2 h-4 w-4" />}
+              </Button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 type ProfileTab = 'saved' | 'inquiries' | 'posts';
 
@@ -33,6 +158,7 @@ export const ProfileScreen: React.FC = () => {
   const { logout, switchRole } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('saved');
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const savedServices = services.filter(s => favorites.includes(s.id));
   const myPosts = lostFoundPosts.filter(p => p.userName === user?.name || p.userName === 'You');
@@ -73,7 +199,10 @@ export const ProfileScreen: React.FC = () => {
       <section className="px-4 pt-4">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-          <button className="p-2 rounded-full bg-gray-100 text-gray-500">
+          <button 
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+          >
             <Settings className="h-5 w-5" />
           </button>
         </div>
@@ -81,7 +210,11 @@ export const ProfileScreen: React.FC = () => {
         <Card className="p-6 border-none shadow-xl shadow-indigo-50/50 bg-gradient-to-br from-indigo-600 to-violet-700 text-white">
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 rounded-2xl border-4 border-white/20 overflow-hidden bg-white/10">
-              <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+              <img 
+                src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
+                alt={user.name} 
+                className="h-full w-full object-cover" 
+              />
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-bold">{user.name}</h2>
@@ -91,7 +224,7 @@ export const ProfileScreen: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 text-white/80 text-xs mt-1">
                 <Phone className="h-3 w-3" />
-                <span>+91 98765 43210</span>
+                <span>{user.phone || 'Add phone number'}</span>
               </div>
             </div>
           </div>
@@ -137,6 +270,11 @@ export const ProfileScreen: React.FC = () => {
           </Link>
         )}
       </section>
+
+      <ProfileSettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
 
       {/* Tabs */}
       <section className="px-4">

@@ -29,19 +29,7 @@ export default function App() {
   }, [initialize]);
 
   const handleInquirySubmit = (data: any) => {
-    if (!selectedServiceForInquiry) return;
-    addInquiry({
-      serviceId: selectedServiceForInquiry.id,
-      vendorId: selectedServiceForInquiry.vendorId,
-      serviceName: selectedServiceForInquiry.name,
-      serviceImage: 'https://picsum.photos/seed/service/400/400', // Fallback or get from store
-      userName: data.name,
-      userPhone: data.phone,
-      message: data.requirement,
-      type: 'inquiry',
-      preferredTime: data.preferredTime,
-      serviceType: data.serviceType
-    });
+    addInquiry(data);
   };
 
   return (

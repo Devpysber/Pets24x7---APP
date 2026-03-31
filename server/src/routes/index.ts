@@ -36,6 +36,7 @@ router.get('/health', async (req, res) => {
 router.post('/auth/login', authController.login);
 router.post('/auth/signup', authController.signup);
 router.get('/auth/profile', authenticate, authController.getProfile);
+router.patch('/auth/profile', authenticate, authController.updateProfile);
 
 // Subscription Routes
 router.get('/subscription', authenticate, authorize(['VENDOR', 'ADMIN']), subscriptionController.getSubscription);
@@ -49,17 +50,21 @@ router.get('/listings/:id', listingsController.getListingById); // Alias
 // Protected Listings (Vendor/Admin)
 router.post('/listing', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.createListing);
 router.post('/listings', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.createListing); // Alias
+router.patch('/listing/:id', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.updateListing);
+router.patch('/listings/:id', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.updateListing); // Alias
+router.put('/listing/:id', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.updateListing); // Alias
+router.delete('/listing/:id', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.deleteListing);
+router.delete('/listings/:id', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.deleteListing); // Alias
+router.get('/vendor/listings', authenticate, authorize(['VENDOR', 'ADMIN']), listingsController.getVendorListings);
 
 // Leads Routes (Protected)
+router.get('/leads/user', authenticate, leadsController.getUserLeads);
 router.post('/lead', authenticate, leadsController.createLead);
 router.post('/leads', authenticate, leadsController.createLead); // Alias
-router.get('/vendor/leads', authenticate, authorize(['VENDOR', 'ADMIN']), (req: any, res) => {
-  // If vendorId is not in params, we might want to get it from the user profile
-  // For now, keeping the param-based one but adding this for the contract
-  res.status(400).json({ error: 'vendorId required' });
-});
+router.get('/vendor/leads', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.getVendorLeads);
 router.get('/leads/vendor/:vendorId', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.getLeadsByVendor);
 router.patch('/lead/:id/status', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.updateLeadStatus);
+router.patch('/lead/status', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.updateLeadStatus);
 router.patch('/leads/:id/status', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.updateLeadStatus); // Alias
 router.post('/leads/buy', authenticate, authorize(['VENDOR', 'ADMIN']), leadsController.buyLeads);
 

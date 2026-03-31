@@ -19,10 +19,16 @@ import { cn } from '../utils/theme';
 
 export const LeadHistoryScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { inquiries, user } = useAppStore();
+  const { inquiries, user, fetchUserInquiries } = useAppStore();
   
+  React.useEffect(() => {
+    if (user?.id) {
+      fetchUserInquiries();
+    }
+  }, [user?.id, fetchUserInquiries]);
+
   // Filter inquiries for current user
-  const userInquiries = inquiries.filter(inq => inq.userId === user?.id || inq.userId === 'guest');
+  const userInquiries = inquiries;
 
   const getTypeIcon = (type: string) => {
     switch (type) {

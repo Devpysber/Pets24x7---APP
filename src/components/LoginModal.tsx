@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Lock, ArrowRight, User } from 'lucide-react';
+import { X, Mail, Lock, ArrowRight, User, Phone } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './Button';
+import { cn } from '../utils/theme';
 import axiosInstance from '../api/axiosInstance';
 
 interface LoginModalProps {
@@ -11,11 +12,13 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { login } = useAuth();
+  const { login, register, isLoading: authLoading, error: authError } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<'user' | 'vendor'>('user');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,16 +31,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         await login(email, password);
         onClose();
       } else {
-        const response = await axiosInstance.post('/auth/register', { email, password, name });
-        const { user, token } = response.data;
-        localStorage.setItem('auth_token', token);
-        // We might need to update the store here, but login() does it.
-        // For simplicity, let's just login after registration or handle it here.
-        await login(email, password);
+        await register(name, email, password, role, phone);
         onClose();
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Authentication failed. Please try again.');
+      setError(err.response?.data?.error || authError || 'Authentication failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -89,17 +87,52 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'register' && (
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    required
-                    type="text"
-                    placeholder="Full Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
-                  />
-                </div>
+                <>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      required
+                      type="text"
+                      placeholder="Full Name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      required
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+                  <div className="flex p-1 bg-gray-100 rounded-2xl mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setRole('user')}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all",
+                        role === 'user' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500"
+                      )}
+                    >
+                      I'm a User
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole('vendor')}
+                      className={cn(
+                        "flex-1 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all",
+                        role === 'vendor' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500"
+                      )}
+                    >
+                      I'm a Vendor
+                    </button>
+                  </div>
+                </>
               )}
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />

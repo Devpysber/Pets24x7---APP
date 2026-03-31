@@ -23,10 +23,14 @@ import {
   Phone,
   MapPin,
   Check,
-  Clock
+  Clock,
+  Building2,
+  Globe,
+  FileText,
+  Settings
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PetService, Inquiry, InquiryStatus } from '../types';
+import { PetService, Inquiry, InquiryStatus, Vendor } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Link, useNavigate } from 'react-router-dom';
@@ -40,24 +44,189 @@ import { Badge } from '../components/Badge';
 import { DataTable } from '../components/DataTable';
 import { FlatList } from '../components/FlatList';
 import { SubscriptionModal } from '../components/SubscriptionModal';
+import { vendorApi } from '../api/vendor.api';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+interface VendorProfileSettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const VendorProfileSettingsModal: React.FC<VendorProfileSettingsModalProps> = ({ isOpen, onClose }) => {
+  const { user, setUser } = useAppStore();
+  const vendor = user?.vendorProfile;
+  const [businessName, setBusinessName] = useState(vendor?.businessName || '');
+  const [description, setDescription] = useState(vendor?.description || '');
+  const [city, setCity] = useState(vendor?.city || '');
+  const [address, setAddress] = useState(vendor?.address || '');
+  const [website, setWebsite] = useState(vendor?.website || '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendor) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedVendor = await vendorApi.updateProfile(vendor.id, {
+        businessName,
+        description,
+        city,
+        address,
+        website
+      });
+      if (user) {
+        setUser({ ...user, vendorProfile: updatedVendor });
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update vendor profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative w-full max-w-lg bg-white rounded-[32px] overflow-hidden shadow-2xl p-8 max-h-[90vh] overflow-y-auto"
+          >
+            <button 
+              onClick={onClose}
+              className="absolute top-6 right-6 p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">Business Settings</h2>
+              <p className="text-sm text-gray-500 mt-2">Update your vendor profile information</p>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold rounded-xl text-center">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Business Name</label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    required
+                    type="text"
+                    placeholder="Business Name"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Description</label>
+                <div className="relative">
+                  <FileText className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                  <textarea
+                    placeholder="Tell us about your business..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium min-h-[100px] resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">City</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      required
+                      type="text"
+                      placeholder="City"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Website</label>
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Address</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Full Business Address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl border border-black/5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full h-14 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-100 font-bold mt-4"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Business Profile'}
+                {!isLoading && <Save className="ml-2 h-4 w-4" />}
+              </Button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 export default function VendorDashboardScreen() {
-  const { user, services, inquiries, subscription, updateSubscription, cancelSubscription, addService, updateService, deleteService, updateInquiryStatus, leadCredits, fetchVendorStats } = useAppStore();
+  const { user, services, inquiries, subscription, updateSubscription, cancelSubscription, addService, updateService, deleteService, updateInquiryStatus, leadCredits, fetchVendorStats, fetchVendorLeads } = useAppStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'listings' | 'leads' | 'subscription'>('overview');
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   React.useEffect(() => {
-    if (user?.id) {
-      // In a real app, we'd use the vendor ID associated with the user
-      // For now, we use 'v1' as a mock vendor ID
-      fetchVendorStats('v1');
+    if (user?.vendorProfile?.id) {
+      fetchVendorStats(user.vendorProfile.id);
+      fetchVendorLeads();
     }
-  }, [user?.id, fetchVendorStats]);
+  }, [user?.vendorProfile?.id, fetchVendorStats, fetchVendorLeads]);
   const [editingService, setEditingService] = useState<PetService | null>(null);
   const [isAddingService, setIsAddingService] = useState(false);
   const [newService, setNewService] = useState<Partial<PetService>>({
@@ -80,7 +249,7 @@ export default function VendorDashboardScreen() {
 
   // Filter services owned by this vendor
   const myServices = services.filter(s => s.vendorId === user?.id); 
-  const myLeads = inquiries.filter(i => myServices.some(s => s.id === i.serviceId));
+  const myLeads = inquiries;
 
   const filteredLeads = leadFilters.length === 0 
     ? myLeads 
@@ -149,10 +318,18 @@ export default function VendorDashboardScreen() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Vendor Dashboard</h1>
-            <p className="text-sm text-slate-500">Manage your pet business</p>
+            <p className="text-sm text-slate-500">{user?.vendorProfile?.businessName || 'Manage your pet business'}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-            <Users className="w-6 h-6 text-emerald-600" />
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <Users className="w-6 h-6 text-emerald-600" />
+            </div>
           </div>
         </div>
 
@@ -758,6 +935,11 @@ export default function VendorDashboardScreen() {
       <LeadPurchaseModal 
         isOpen={isLeadModalOpen} 
         onClose={() => setIsLeadModalOpen(false)} 
+      />
+
+      <VendorProfileSettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
       />
     </div>
   );

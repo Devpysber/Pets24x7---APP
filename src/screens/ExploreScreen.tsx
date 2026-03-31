@@ -72,8 +72,8 @@ export const ExploreScreen: React.FC = () => {
       };
 
       const response = await listingsApi.getListings(params);
-      setServices(response.data);
-      setTotalResults(response.meta.total);
+      setServices(response.listings);
+      setTotalResults(response.total);
     } catch (err) {
       setError('Failed to fetch services. Please try again.');
       console.error(err);

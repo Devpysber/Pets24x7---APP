@@ -29,42 +29,34 @@ export const ActionButtons: React.FC<ActionButtonsProps> = memo(({
   size = 'md',
   showInquiry = true
 }) => {
-  const { addInquiry, user, openInquiryModal } = useAppStore();
-
-  const trackLead = useCallback((type: 'call' | 'whatsapp' | 'inquiry') => {
-    addInquiry({
-      serviceId,
-      vendorId,
-      serviceName,
-      serviceImage,
-      userName: user?.name || 'Guest User',
-      userPhone: user?.email || '', // Fallback or use a proper phone if available
-      message: `User clicked ${type} button`,
-      type,
-    });
-  }, [addInquiry, serviceId, vendorId, serviceName, serviceImage, user]);
+  const { createLead, openInquiryModal } = useAppStore();
 
   const handleCall = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    trackLead('call');
+    createLead({
+      vendorId,
+      listingId: serviceId,
+      actionType: 'CALL',
+      message: `User clicked Call for ${serviceName}`
+    });
     window.location.href = `tel:${phone}`;
-  }, [phone, trackLead]);
+  }, [phone, createLead, vendorId, serviceId, serviceName]);
 
   const handleWhatsapp = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    trackLead('whatsapp');
+    createLead({
+      vendorId,
+      listingId: serviceId,
+      actionType: 'WHATSAPP',
+      message: `User clicked WhatsApp for ${serviceName}`
+    });
     window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank');
-  }, [whatsapp, trackLead]);
+  }, [whatsapp, createLead, vendorId, serviceId, serviceName]);
 
   const handleInquiryClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    trackLead('inquiry');
-    if (onInquiry) {
-      onInquiry();
-    } else {
-      openInquiryModal({ id: serviceId, vendorId, name: serviceName });
-    }
-  }, [onInquiry, openInquiryModal, serviceId, vendorId, serviceName, trackLead]);
+    openInquiryModal({ id: serviceId, vendorId, name: serviceName });
+  }, [openInquiryModal, serviceId, vendorId, serviceName]);
 
   const buttonSizeClass = cn(
     size === 'sm' ? "h-8 w-8 p-0" : size === 'md' ? "h-10 w-10 p-0" : "h-12 w-12 p-0"

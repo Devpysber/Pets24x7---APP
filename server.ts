@@ -10,6 +10,8 @@ import { errorHandler } from './server/src/middlewares/error.js';
 import apiRoutes from './server/src/routes/index.js';
 import { initErrorTracking } from './server/src/utils/errorTracking.js';
 
+import { prisma } from './server/src/lib/prisma.js';
+
 dotenv.config();
 initErrorTracking();
 
@@ -52,7 +54,6 @@ async function startServer() {
   app.listen(PORT, '0.0.0.0', async () => {
     console.log(`Server running on http://localhost:${PORT}`);
     try {
-      const { prisma } = await import('./server/src/lib/prisma.js');
       await prisma.$connect();
       console.log('Database connected successfully');
     } catch (error) {

@@ -18,25 +18,27 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
 
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      addCommunityPost({
+    try {
+      await addCommunityPost({
         content,
         category,
         image: image || undefined,
         serviceId: selectedServiceId || undefined,
       });
-      setIsLoading(false);
       setContent('');
       setImage('');
       setSelectedServiceId('');
       onClose();
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to create post:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const categories: ('Tips' | 'Adoption' | 'Stories')[] = ['Tips', 'Adoption', 'Stories'];

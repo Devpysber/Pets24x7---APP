@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User, PetService, Banner, LostFoundPost, CommunityPost, CommunityComment, Inquiry, Notification } from '../types';
 import { leadsApi } from '../api/leads.api';
+import axiosInstance from '../api/axiosInstance';
 import { vendorApi } from '../api/vendor.api';
 import { listingsApi } from '../api/listings.api';
 import { lostFoundApi } from '../api/lostfound.api';
@@ -46,7 +47,10 @@ interface AppState {
   addLostFoundPost: (post: Omit<LostFoundPost, 'id' | 'createdAt' | 'userName' | 'userImage'>) => void;
   updateLostFoundPost: (id: string, post: Partial<LostFoundPost>) => void;
   toggleFavorite: (serviceId: string) => void;
-  addInquiry: (inquiry: Omit<Inquiry, 'id' | 'createdAt' | 'userId' | 'status'>) => void;
+  addInquiry: (inquiry: any) => void;
+  fetchUserInquiries: () => Promise<void>;
+  fetchVendorLeads: () => Promise<void>;
+  createLead: (leadData: { vendorId: string; listingId?: string; actionType: 'CALL' | 'WHATSAPP' | 'INQUIRY'; message?: string }) => Promise<void>;
   updateInquiryStatus: (id: string, status: Inquiry['status']) => void;
   addCommunityPost: (post: Omit<CommunityPost, 'id' | 'createdAt' | 'userName' | 'userImage' | 'userId' | 'likes' | 'comments'>) => void;
   updateCommunityPost: (id: string, post: Partial<CommunityPost>) => void;
@@ -98,21 +102,26 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       set({
         banners,
-        services: listingsResponse.data,
+        services: listingsResponse.listings,
         communityPosts,
         lostFoundPosts,
       });
 
-      // If user is logged in, fetch their profile and notifications
-      const user = get().user;
-      if (user) {
-        const [notifications, profile] = await Promise.all([
-          notificationsApi.getNotifications(),
-          userApi.getProfile(),
-        ]);
-        set({ notifications, user: profile, userRole: profile.role });
-        if (profile.role === 'vendor') {
-          await get().fetchVendorStats(profile.id);
+      // If token exists, fetch profile and notifications
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const profile = await userApi.getProfile();
+          const notifications = await notificationsApi.getNotifications();
+          set({ notifications, user: profile, userRole: profile.role });
+          if (profile.role === 'vendor') {
+            await get().fetchVendorStats(profile.id);
+          }
+        } catch (err) {
+          console.error('Failed to fetch user profile during initialization:', err);
+          // If profile fetch fails, token might be invalid/expired
+          localStorage.removeItem('auth_token');
+          set({ user: null, userRole: 'user' });
         }
       }
     } catch (error) {
@@ -164,25 +173,32 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUserRole: (role) => set({ userRole: role }),
   buyLeads: async (amount) => {
     const state = get();
-    // In a real app, we'd get the vendorId from the user's profile
-    const vendorId = 'v1'; 
+    const vendorId = state.user?.vendorProfile?.id;
+    if (!vendorId) {
+      console.error('No vendor profile found for current user');
+      return;
+    }
     try {
       const newBalance = await leadsApi.buyLeads(vendorId, amount);
       set({ leadCredits: newBalance });
     } catch (error) {
       console.error('Failed to buy leads:', error);
-      // Fallback to local state if API fails
-      set((state) => ({ leadCredits: state.leadCredits + amount }));
     }
   },
   updateSubscription: async (plan) => {
+    const state = get();
+    const vendorId = state.user?.vendorProfile?.id;
+    if (!vendorId) {
+      console.error('No vendor profile found for current user');
+      return;
+    }
     set({ isLoading: true });
     try {
       const { subscription } = await subscriptionApi.upgrade(plan);
       set({ subscription });
       // Refresh listings to reflect premium status
       const response = await listingsApi.getListings();
-      set({ services: response.data });
+      set({ services: response.listings });
     } catch (error) {
       console.error('Failed to upgrade subscription:', error);
     } finally {
@@ -278,29 +294,69 @@ export const useAppStore = create<AppState>((set, get) => ({
       ? state.favorites.filter(id => id !== serviceId)
       : [...state.favorites, serviceId]
   })),
-  addInquiry: async (inquiryData) => {
-    const state = get();
-    set({ isLoading: true });
+  fetchUserInquiries: async () => {
     try {
-      const newInquiry = await leadsApi.createLead({
-        ...inquiryData,
-        userId: state.user?.id || 'guest',
-        status: 'new',
-      });
+      const inquiries = await leadsApi.getUserLeads();
+      set({ inquiries });
+    } catch (error) {
+      console.error('Failed to fetch user inquiries:', error);
+    }
+  },
+  fetchVendorLeads: async () => {
+    try {
+      const leads = await leadsApi.getVendorLeads();
+      set({ inquiries: leads });
+    } catch (error) {
+      console.error('Failed to fetch vendor leads:', error);
+    }
+  },
+  createLead: async (leadData: { vendorId: string; listingId?: string; actionType: 'CALL' | 'WHATSAPP' | 'INQUIRY'; message?: string }) => {
+    try {
+      const newLead = await leadsApi.createLead(leadData);
       set((state) => ({
-        inquiries: [newInquiry, ...state.inquiries]
+        inquiries: [newLead, ...state.inquiries]
       }));
       
       // Add notification for the vendor
       get().addNotification({
-        userId: newInquiry.vendorId,
+        userId: leadData.vendorId,
         type: 'lead',
-        title: 'New Lead Received!',
-        message: `${newInquiry.userName} is interested in "${newInquiry.serviceName}".`,
+        title: `New ${leadData.actionType.toLowerCase()} lead!`,
+        message: `A user initiated a ${leadData.actionType.toLowerCase()} contact.`,
         link: '/vendor/dashboard'
       });
     } catch (error) {
       console.error('Failed to create lead:', error);
+    }
+  },
+  addInquiry: async (inquiryData) => {
+    const state = get();
+    const selectedService = state.selectedServiceForInquiry;
+    if (!selectedService) return;
+
+    set({ isLoading: true });
+    try {
+      const newLead = await leadsApi.createLead({
+        vendorId: selectedService.vendorId,
+        listingId: selectedService.id,
+        actionType: 'INQUIRY',
+        message: `Inquiry from ${inquiryData.name}: ${inquiryData.requirement}. Preferred time: ${inquiryData.preferredTime}`
+      });
+      
+      set((state) => ({
+        inquiries: [newLead, ...state.inquiries]
+      }));
+      
+      // Add notification for the vendor
+      get().addNotification({
+        userId: selectedService.vendorId,
+        type: 'lead',
+        title: 'New Inquiry Received!',
+        message: `${inquiryData.name} is interested in "${selectedService.name}".`,
+        link: '/vendor/dashboard'
+      });
+    } catch (error) {
+      console.error('Failed to create inquiry lead:', error);
     } finally {
       set({ isLoading: false });
     }

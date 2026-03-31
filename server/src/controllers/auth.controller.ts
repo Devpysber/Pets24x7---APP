@@ -57,7 +57,21 @@ export const signup = async (req: Request, res: Response) => {
         phone,
         role: role || 'USER',
         passwordHash,
+        ...(role === 'VENDOR' ? {
+          vendorProfile: {
+            create: {
+              businessName: name, // Default to user's name
+              city: 'Mumbai', // Default city
+              isVerified: false,
+              isPremium: false,
+              leadCredits: 10, // Give some free credits
+            }
+          }
+        } : {})
       },
+      include: {
+        vendorProfile: true,
+      }
     });
 
     const token = jwt.sign(
@@ -91,5 +105,28 @@ export const getProfile = async (req: any, res: Response) => {
     res.json(userWithoutPassword);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+};
+
+export const updateProfile = async (req: any, res: Response) => {
+  try {
+    const { name, phone, avatar } = req.body;
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name,
+        phone,
+        avatar,
+      },
+      include: {
+        vendorProfile: true,
+      },
+    });
+
+    const { passwordHash, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 };

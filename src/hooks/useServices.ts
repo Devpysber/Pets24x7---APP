@@ -13,7 +13,7 @@ export const useServices = () => {
     setError(null);
     try {
       const response = await listingsApi.getListings();
-      setServices(response.data);
+      setServices(response.listings);
     } catch (err) {
       setError('Failed to fetch services. Please try again.');
       console.error(err);
